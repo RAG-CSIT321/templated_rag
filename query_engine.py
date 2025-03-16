@@ -15,7 +15,7 @@ class QueryEngine:
 
     def initialize_gemini_model(self):
         """Initialize the Google Gemini model."""
-        api_key = os.environ.get("GOOGLE_API_KEY", "AIzaSyAldbAVtknZ7ueoidvZltGcoNlJu_NIRmA")
+        api_key = os.environ.get("GOOGLE_API_KEY", "")
         model_name = os.environ.get("MODEL_NAME", "models/gemini-pro")
 
         if not api_key or not model_name:
