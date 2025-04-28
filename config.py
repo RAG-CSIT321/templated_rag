@@ -5,7 +5,7 @@ from llama_index.core import Settings
 
 class Config:
     GOOGLE_API_KEY = ""
-    GEMINI_MODEL = "models/gemini-pro"
+    GEMINI_MODEL = "models/gemini-1.5-pro"
     EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 
     @staticmethod
