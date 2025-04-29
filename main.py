@@ -1,41 +1,51 @@
-from flask import Flask, request, jsonify, render_template
+from fastapi import FastAPI, Request, UploadFile, File, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.templating import Jinja2Templates
+import os
+import json
+import logging
+
 from file_processor import FileProcessor
 from query_engine import QueryEngine
 from chat_history import ChatHistory
-import os
-from flask_cors import CORS
-import datetime
 
-import json
-app = Flask(__name__)
-CORS(app)
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})  
+app = FastAPI()
+
+# CORS setup
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5000", "http://127.0.0.1:5000"],  # Handle both versions
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Templates setup
+templates = Jinja2Templates(directory="templates")
 
 # Initialize components
 query_engine = QueryEngine()
 file_processor = FileProcessor(data_dir="data")
 chat_history = ChatHistory(history_file="chat_history.json")
 
-@app.route('/')
-def home():
-    return render_template('chat_ui.html')
-
-import logging
-
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("chat_ui.html", {"request": request})
 
-@app.route('/api/interact_with_agent', methods=['POST'])
-def interact_with_agent():
-    data = request.json
+@app.post("/api/interact_with_agent")
+async def interact_with_agent(request: Request):
+    data = await request.json()
     prompt = data.get('prompt', '')
     session_id = data.get('session_id', 'default')
 
     try:
         use_context = file_processor.retriever is not None
-        response = query_engine.query( file_processor.retriever, prompt, use_context=use_context)
-        # Get actual content from Gemini AIMessage
+        response = query_engine.query(file_processor.retriever, prompt, use_context=use_context)
+        # Get actual content
         if hasattr(response, "content"):
             response_content = response.content
         elif isinstance(response, dict):
@@ -43,49 +53,49 @@ def interact_with_agent():
         else:
             response_content = str(response)
 
-        # Handle empty response
         if not isinstance(response_content, str) or not response_content.strip():
             response_content = "I don't know. Please upload relevant files to provide more context."
 
     except Exception as e:
         logging.error(f"Error in QueryEngine: {e}")
-        return jsonify({"error": f"Query Engine Error: {str(e)}"}), 500  # Trả về mã lỗi 500
+        raise HTTPException(status_code=500, detail=f"Query Engine Error: {str(e)}")
+
     chat_history.save_chat_history(session_id, [
         {"role": "user", "content": prompt},
         {"role": "assistant", "content": response_content}
     ])
-    return jsonify({"messages": [{"role": "assistant", "content": response_content}]})
+    return JSONResponse(content={"messages": [{"role": "assistant", "content": response_content}]})
+
+@app.options("/api/interact_with_agent")
+async def handle_options():
+    return JSONResponse(content={})
+
+@app.post("/api/upload_file")
+async def upload_file(file: UploadFile = File(...)):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No selected file")
+
+    file_path = os.path.join("data", file.filename)
+    with open(file_path, "wb") as buffer:
+        buffer.write(await file.read())
     
+    result = file_processor.process_file(file_path)
+    return JSONResponse(content={"message": result})
 
-
-@app.route('/api/upload_file', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"})
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"})
-    if file:
-        file_path = os.path.join("data", file.filename)
-        file.save(file_path)
-        result = file_processor.process_file(file_path)
-        return jsonify({"message": result})
-    return jsonify({"error": "File save failed"})
-
-@app.route('/api/list_chat_sessions', methods=['GET'])
-def list_chat_sessions():
+@app.get("/api/list_chat_sessions")
+async def list_chat_sessions():
     sessions = chat_history.list_chat_sessions()
-    return jsonify(sessions)
+    return JSONResponse(content=sessions)
 
-@app.route('/api/load_chat_history/<session_id>', methods=['GET'])
-def load_chat_history(session_id):
+@app.get("/api/load_chat_history/{session_id}")
+async def load_chat_history(session_id: str):
     history = chat_history.load_chat_history(session_id)
     if history:
-        return jsonify(history)
+        return JSONResponse(content=history)
     else:
-        return jsonify({"error": "No history found"})
+        raise HTTPException(status_code=404, detail="No history found")
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=5000, reload=False)
 
