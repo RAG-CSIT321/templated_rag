@@ -1,5 +1,5 @@
 import os
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 MODEL_NAME= 'gemini-1.5-flash'
 MODEL_API_KEY= 'AIzaSyCCDH1LZgcluEGoXnJRyrEZ21aLTBXScK0'
 
