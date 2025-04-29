@@ -2,9 +2,9 @@ from flask import Flask, request, jsonify, render_template
 from file_processor import FileProcessor
 from query_engine import QueryEngine
 from chat_history import ChatHistory
-from config import Config
 import os
 from flask_cors import CORS
+import datetime
 
 
 app = Flask(__name__)
@@ -12,9 +12,8 @@ CORS(app)
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})  
 
 # Initialize components
-Config.setup_environment()
 query_engine = QueryEngine()
-file_processor = FileProcessor(data_dir="data", query_engine=query_engine)
+file_processor = FileProcessor(data_dir="data")
 chat_history = ChatHistory(history_file="chat_history.json")
 
 @app.route('/')
@@ -27,25 +26,31 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 @app.route('/api/interact_with_agent', methods=['POST'])
-def interact_with_agent():
-    data = request.json
-    prompt = data.get('prompt', '')
-    session_id = data.get('session_id', 'default')
+def interact_with_agent(self, prompt, session_id="default"):
+        """Interact with chatbot and save history."""
+        try:
+            use_context = file_processor.retriever is not None
+            response = query_engine.query(self.file_processor.retriever,prompt, use_context=use_context)
 
-    try:
-        used_context =query_engine.query_engine is not None
-        response = query_engine.query(prompt, use_context=used_context)
-    except Exception as e:
-        logging.error(f"Error in QueryEngine: {e}")
-        return jsonify({"error": f"Query Engine Error: {str(e)}"}), 500  # Trả về mã lỗi 500
-    response_content = response if isinstance(response, dict) else str(response)
-    if not response_content.strip():
-        response_content = "I don't know. Please upload relevant files to provide more context."
-    chat_history.save_chat_history(session_id, [
-        {"role": "user", "content": prompt},
-        {"role": "assistant", "content": response_content}
-    ])
-    return jsonify({"messages": [{"role": "assistant", "content": response_content}]})
+            response_text = response if isinstance(response, str) else str(response)
+
+            if not response_text.strip():
+                response_text = "I don't know. Please upload relevant files to provide more context."
+
+            history = chat_history.load_chat_history(session_id) or {"messages": []}
+            history["messages"].append({"role": "user", "content": prompt})
+            history["messages"].append({"role": "assistant", "content": response_text})
+
+            self.chat_history.save_chat_history(session_id, history["messages"])
+
+            return {
+                "status": "success",
+                "timestamp": datetime.now().isoformat(),
+                "messages": [{"role": "assistant", "content": response_text}],
+            }
+
+        except Exception as e:
+            return {"status": "error", "message": f"Error interacting with the agent: {str(e)}"}
 
 
 @app.route('/api/upload_file', methods=['POST'])

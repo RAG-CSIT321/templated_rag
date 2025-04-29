@@ -1,20 +1,15 @@
 import os
-import shutil
-import pandas as pd
-from PIL import Image
-from PyPDF2 import PdfReader
-from pdf2image import convert_from_bytes
-import pytesseract
-import io
-from store_data import StoreData
 import threading
+from store_data import StoreData
+from langchain_core.documents import Document
+from langchain_community.document_loaders import CSVLoader,PyPDFLoader,WebBaseLoader,TextLoader
+from langchain_community.document_loaders.image import UnstructuredImageLoader
 
 class FileProcessor:
-    def __init__(self, data_dir="data", query_engine=None):
+    def __init__(self, data_dir="data"):
         self.data_dir = data_dir
-        self.query_engine = query_engine  # Inject the QueryEngine instance
         self.ensure_data_directory()
-
+        self.retriever = None
     def ensure_data_directory(self):
         """Ensure that the data directory exists."""
         if not os.path.exists(self.data_dir):
@@ -47,67 +42,37 @@ class FileProcessor:
             # Get file extension and base name
             file_type = file_path.split('.')[-1].lower()
             base_name = os.path.splitext(os.path.basename(file_path))[0]
-
-            # Copy the file to the 'data' directory
-            file_path_in_data = os.path.join(self.data_dir, f"{base_name}_original.{file_type}")
-            shutil.copy(file_path, file_path_in_data)
-
-            text_content = ""
+            
+            documentss = None
+            split = True
 
             # Process based on file type
             if file_type in ['jpg', 'jpeg', 'png']:  # Image files
-                image = Image.open(file_path)
-                text_content = pytesseract.image_to_string(image)
-
+                loader = UnstructuredImageLoader(file_path)
+                documentss = loader.load()
+                print("File process succeed")
+            # Process the CSV file
             elif file_type == 'csv':  # CSV files
-                df = pd.read_csv(file_path)
-                text_content = df.head().to_string()
-
+                loader = CSVLoader(file_path=file_path)
+                documentss = loader.load()
+                split =False
+                print("File process succeed")
+            
             elif file_type == 'pdf':  # PDF files
-                with open(file_path, "rb") as f:
-                    pdf_bytes = f.read()
-                pdf_file = io.BytesIO(pdf_bytes)
-
-                reader = PdfReader(pdf_file)
-                text = ""
-
-                for page in reader.pages:
-                    extracted_text = page.extract_text()
-                    if extracted_text:
-                        text += extracted_text
-
-                if text.strip():
-                    text_content = text.strip()
-                else:
-                    pdf_file.seek(0)
-                    images = convert_from_bytes(pdf_file.read())
-                    ocr_text = ""
-                    for i, image in enumerate(images):
-                        ocr_text += f"\nPage {i + 1}:\n"
-                        ocr_text += pytesseract.image_to_string(image)
-                    text_content = ocr_text.strip()
-
+                loader = PyPDFLoader(file_path=file_path)
+                documentss = loader.load()
+                print("File process succeed")
             elif file_type == 'txt':  # Text files
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    text_content = f.read().strip()
-
-            # Save extracted text to a file in the 'data' directory
-            text_file_path = os.path.join(self.data_dir, f"{base_name}_processed.txt")
-            with open(text_file_path, 'w', encoding='utf-8') as f:
-                f.write(text_content)
+                loader = TextLoader(file_path, encoding='utf-8')
+                documentss = loader.load()
+                print("File process succeed")
 
             # Trigger StoreData processing and update the index
-            storage = StoreData(data_dir=self.data_dir)
-            index = storage.process_data()
+            store = StoreData()
+            # Load the index from Redis
+            store.process_data(documentss,split)
+            self.retriever = store.load_retriever()
 
-            if self.query_engine:
-                self.query_engine.update_index(index)
-
-            # Notify the system via callback, if provided
-            if on_file_uploaded:
-                on_file_uploaded(file_path_in_data)
-
-            return f"File saved to {file_path_in_data}. Data processed and index updated successfully!"
 
         except Exception as e:
             return f"Error processing file: {str(e)}"

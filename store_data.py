@@ -1,27 +1,40 @@
-from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
-from llama_index.core.node_parser import TokenTextSplitter
-
+from langchain_community.vectorstores.redis import Redis as RedisVectorStore
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from redis import Redis
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from config import configg
+import os
 class StoreData:
-    def __init__(self, data_dir="data", storage_dir="data_storage"):
+    def __init__(self, data_dir="data"):
         self.data_dir = data_dir
-        self.storage_dir = storage_dir
-        self.index = None
-
-    def process_data(self):
-        """Process files in the data directory and update the index."""
-        reader = SimpleDirectoryReader(input_dir=self.data_dir)
-        documents = reader.load_data()
-
-        splitter = TokenTextSplitter(chunk_size=512, chunk_overlap=10, separator=" ")
-        nodes = splitter.get_nodes_from_documents(documents)
-
-        self.index = VectorStoreIndex(nodes)
-        self.index.storage_context.persist(persist_dir=self.storage_dir)
-        return self.index
-
-    def load_index(self):
-        """Load the persisted index."""
-        from llama_index.core import StorageContext, load_index_from_storage
-        storage_context = StorageContext.from_defaults(persist_dir=self.storage_dir)
-        self.index = load_index_from_storage(storage_context)
-        return self.index
+        self.config = configg
+        self.retriever = None
+        self.url ="redis://localhost:6379"
+        # Connect to Redis
+        self.redis_client = Redis.from_url(self.url)
+        self.embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
+    def process_data(self,documents,split):
+        """Process files and store the index in Redis."""
+        if self.redis_client.ping():
+            print("✅ Redis server is up and running!")
+        else:
+            print("❌ Failed to connect to Redis.")
+        texts=None
+        # Split text into chunks
+        if split:
+            splitter = RecursiveCharacterTextSplitter(chunk_size=256, chunk_overlap=50)
+            texts = splitter.split_documents(documents)
+        else:
+            texts = documents
+        url = "redis://localhost:6379"
+        vstore = Redis.from_texts(
+            texts= [text.page_content for text in texts],
+            metadata = [text.metadata for text in texts],
+            embedding=self.embeddings,
+            redis_url=url,
+        )
+        self.retriever = vstore.as_retriever()
+    def load_retriever(self):
+        return self.retriever
