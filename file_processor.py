@@ -74,7 +74,7 @@ class FileProcessor:
             # Load the index from Redis
             store.process_data(documentss,split)
             self.retriever = store.load_retriever()
-
+#commtiWSWqw
 
         except Exception as e:
             return f"Error processing file: {str(e)}"
