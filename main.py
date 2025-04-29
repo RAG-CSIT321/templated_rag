@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from file_processor import FileProcessor
 from query_engine import QueryEngine
 from chat_history import ChatHistory
@@ -19,7 +19,7 @@ chat_history = ChatHistory(history_file="chat_history.json")
 
 @app.route('/')
 def home():
-    return 'Hello, World!'
+    return render_template('chat_ui.html')
 
 import logging
 

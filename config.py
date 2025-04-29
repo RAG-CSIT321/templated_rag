@@ -4,8 +4,8 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core import Settings
 
 class Config:
-    GOOGLE_API_KEY = "AIzaSyAldbAVtknZ7ueoidvZltGcoNlJu_NIRmA"
-    GEMINI_MODEL = "models/gemini-pro"
+    GOOGLE_API_KEY = ""
+    GEMINI_MODEL = "models/gemini-1.5-pro"
     EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 
     @staticmethod
