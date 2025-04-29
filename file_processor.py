@@ -2,7 +2,7 @@ import os
 import threading
 from store_data import StoreData
 from langchain_core.documents import Document
-from langchain_community.document_loaders import CSVLoader,PyPDFLoader,WebBaseLoader,TextLoader
+from langchain_community.document_loaders import CSVLoader,PyPDFLoader,WebBaseLoader,TextLoader,Docx2txtLoader
 from langchain_community.document_loaders.image import UnstructuredImageLoader
 
 class FileProcessor:
@@ -57,7 +57,9 @@ class FileProcessor:
                 documentss = loader.load()
                 split =False
                 print("File process succeed")
-            
+            elif file_type == "doc":
+                loader = Docx2txtLoader(file_path=file_path)
+                documentss = loader.load()
             elif file_type == 'pdf':  # PDF files
                 loader = PyPDFLoader(file_path=file_path)
                 documentss = loader.load()

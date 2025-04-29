@@ -12,9 +12,7 @@ class StoreData:
         self.url ="redis://localhost:6379"
         # Connect to Redis
         self.redis_client = Redis.from_url(self.url)
-        self.embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
+        self.embeddings = configg.MODEL_EMBEDDING_NAME
     def process_data(self,documents,split):
         """Process files and store the index in Redis."""
         if self.redis_client.ping():

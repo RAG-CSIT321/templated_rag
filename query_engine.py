@@ -47,12 +47,7 @@ class QueryEngine:
             # Directly interact with the Gemini model
             print("Querying Gemini model directly without context.")
             prompt = f"Answer the following question using your prior knowledge:\nQuery: {query}\nAnswer:"
-            response = self.llm.complete(prompt)  # Use the Gemini model's completion method
-        if hasattr(response, 'text'):
-            return response.text
-        elif isinstance(response, str):
-            return response
-        else:
-            return response
+            response = self.llm.invoke(prompt)  # Use the Gemini model's completion method
+        return response
 
 

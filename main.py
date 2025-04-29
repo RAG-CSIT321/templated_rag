@@ -6,7 +6,7 @@ import os
 from flask_cors import CORS
 import datetime
 
-
+import json
 app = Flask(__name__)
 CORS(app)
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})  
@@ -25,32 +25,37 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
+
 @app.route('/api/interact_with_agent', methods=['POST'])
-def interact_with_agent(self, prompt, session_id="default"):
-        """Interact with chatbot and save history."""
-        try:
-            use_context = file_processor.retriever is not None
-            response = query_engine.query(self.file_processor.retriever,prompt, use_context=use_context)
+def interact_with_agent():
+    data = request.json
+    prompt = data.get('prompt', '')
+    session_id = data.get('session_id', 'default')
 
-            response_text = response if isinstance(response, str) else str(response)
+    try:
+        use_context = file_processor.retriever is not None
+        response = query_engine.query( file_processor.retriever, prompt, use_context=use_context)
+        # Get actual content from Gemini AIMessage
+        if hasattr(response, "content"):
+            response_content = response.content
+        elif isinstance(response, dict):
+            response_content = json.dumps(response, indent=2)
+        else:
+            response_content = str(response)
 
-            if not response_text.strip():
-                response_text = "I don't know. Please upload relevant files to provide more context."
+        # Handle empty response
+        if not isinstance(response_content, str) or not response_content.strip():
+            response_content = "I don't know. Please upload relevant files to provide more context."
 
-            history = chat_history.load_chat_history(session_id) or {"messages": []}
-            history["messages"].append({"role": "user", "content": prompt})
-            history["messages"].append({"role": "assistant", "content": response_text})
-
-            self.chat_history.save_chat_history(session_id, history["messages"])
-
-            return {
-                "status": "success",
-                "timestamp": datetime.now().isoformat(),
-                "messages": [{"role": "assistant", "content": response_text}],
-            }
-
-        except Exception as e:
-            return {"status": "error", "message": f"Error interacting with the agent: {str(e)}"}
+    except Exception as e:
+        logging.error(f"Error in QueryEngine: {e}")
+        return jsonify({"error": f"Query Engine Error: {str(e)}"}), 500  # Trả về mã lỗi 500
+    chat_history.save_chat_history(session_id, [
+        {"role": "user", "content": prompt},
+        {"role": "assistant", "content": response_content}
+    ])
+    return jsonify({"messages": [{"role": "assistant", "content": response_content}]})
+    
 
 
 @app.route('/api/upload_file', methods=['POST'])
