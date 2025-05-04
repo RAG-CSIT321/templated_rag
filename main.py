@@ -34,7 +34,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    return templates.TemplateResponse("chat_ui.html", {"request": request})
+    return templates.TemplateResponse("chatbot.html", {"request": request})
 
 @app.post("/api/interact_with_agent")
 async def interact_with_agent(request: Request):
