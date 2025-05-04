@@ -1,9 +1,7 @@
-pywebview
 fastapi
 gunicorn
 pydantic
 python-multipart
-llama-index
 transformers
 torch
 PyPDF2
@@ -11,9 +9,11 @@ pdf2image
 pytesseract
 pandas
 Pillow
-llama-index-llms-gemini
-llama-index-embeddings-huggingface
-Flask
+langchain
+langchain-community
+langchain-google-genai
+langchain-huggingface
+redis
 Werkzeug
-flask_cors
+
 
