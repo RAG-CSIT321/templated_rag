@@ -35,6 +35,7 @@ class QueryEngine:
         :param query: The user's query.
         :param use_context: Whether to include contextual data from the index.
         """
+        print(use_context)
         if use_context:
             rag_chain = (
                 {"context": retriever, "question": RunnablePassthrough()}

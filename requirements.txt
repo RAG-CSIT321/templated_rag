@@ -1,5 +1,5 @@
 fastapi
-gunicorn
+uvicorn
 pydantic
 python-multipart
 transformers
@@ -15,5 +15,4 @@ langchain-google-genai
 langchain-huggingface
 redis
 Werkzeug
-
 
