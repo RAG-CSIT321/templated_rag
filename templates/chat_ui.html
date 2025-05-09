@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="icon" href="data:,">
     <title>Chatbot and File Upload</title>
     <style>
         body {
@@ -83,6 +84,7 @@
     <div id="chatbox"></div>
     <input id="prompt" type="text" placeholder="Type your message...">
     <button onclick="sendMessage()">Send</button>
+    <button onclick="createNewSession()">New Chat</button>
 
     <div class="history-section">
         <h2>Chat History</h2>
@@ -98,11 +100,55 @@
     </div>
 
     <script>
+        let currentSessionId = null
+        const currentUserId = "demo_user_123"; 
         const chatbox = document.getElementById('chatbox');
         const promptInput = document.getElementById('prompt');
         const fileInput = document.getElementById('file-input');
         const statusText = document.getElementById('status');
         const historyList = document.getElementById('history-list');
+
+        async function initializeFirstSession() {
+            try {
+                const response = await fetch('http://localhost:5000/api/create_new_session/' + currentUserId, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        session_name: "New Chat"
+                    })
+                });
+                
+                const data = await response.json();
+                currentSessionId = data.session_id;
+                listChatHistory(); // Refresh session list
+            } catch (error) {
+                console.error("Session creation error:", error);
+                appendMessage('system', `Failed to start chat: ${error.message}`);
+            }
+        }
+
+        async function createNewSession() {
+            try {
+                const response = await fetch('http://localhost:5000/api/create_new_session/' + currentUserId, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        session_name: "New Chat"
+                    })
+                });
+                
+                const data = await response.json();
+                currentSessionId = data.session_id;
+                chatbox.innerHTML = '';
+                //appendMessage('system', 'New chat started');
+                
+                // Refresh the session list
+                listChatHistory();
+            } catch (error) {
+                console.error("Error creating new session:", error);
+                //appendMessage('system', `Failed to create new session: ${error.message}`);
+            }
+        }
 
         function appendMessage(role, content) {
             const div = document.createElement('div');
@@ -120,56 +166,178 @@
             promptInput.value = '';
 
             try {
+                // Save user message immediately
+                await fetch('http://localhost:5000/api/save_message', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_id: currentUserId,
+                        session_id: currentSessionId,
+                        role: 'user',
+                        content: prompt
+                    })
+                });
+
                 const response = await fetch('http://localhost:5000/api/interact_with_agent', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({prompt, session_id: 'default'})
+                    body: JSON.stringify({
+                        prompt, 
+                        session_id: currentSessionId,
+                        user_id: currentUserId  
+                    })
                 });
 
                 if (!response.ok) {
-                    console.error('HTTP error:', response.status);
-                    alert('Server error: ' + response.statusText);
-                    return;
+                    throw new Error(`Server error: ${response.status}`);
                 }
 
                 const data = await response.json();
-                if (data.messages) {
-                    data.messages.forEach(msg => appendMessage(msg.role, msg.content));
+                if (data.messages && data.messages.length > 0) {
+                    const assistantMessage = data.messages[0].content;
+                    appendMessage('assistant', assistantMessage);
+                    
+                    // Save assistant response
+                    await fetch('http://localhost:5000/api/save_message', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            user_id: currentUserId,
+                            session_id: currentSessionId,
+                            role: 'assistant',
+                            content: assistantMessage
+                        })
+                    });
                 } else {
-                    console.error('Invalid response format:', data);
-                    alert('Error receiving response from server.');
+                    throw new Error('Invalid response format');
                 }
             } catch (error) {
-                console.error('Network error:', error);
-                alert('Failed to connect to server.');
+                console.error('Error:', error);
+                //appendMessage('system', `Error: ${error.message}`);
             }
         }
+
+
+        async function saveMessageToHistory(role, content) {
+            try {
+                await fetch('http://localhost:5000/api/save_message', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_id: currentUserId,
+                        session_id: currentSessionId,
+                        role: role,
+                        content: content
+                    })
+                });
+            } catch (error) {
+                console.error('Error saving message:', error);
+            }
+        }
+
 
 
         async function listChatHistory() {
-            const response = await fetch('http://localhost:5000/api/list_chat_sessions');
-            const sessions = await response.json();
-            historyList.innerHTML = '';
-            if (sessions.length === 0) {
-                historyList.innerHTML = '<p>No chat history available.</p>';
-                return;
+            try {
+                const response = await fetch(`http://localhost:5000/api/list_chat_sessions/${currentUserId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log("API Response:", result);  // Debug log
+                
+                // Handle the response data
+                const sessions = result.data || [];
+                historyList.innerHTML = '';
+
+                if (sessions.length === 0) {
+                    historyList.innerHTML = '<p>No chat sessions found</p>';
+                    return;
+                }
+
+                sessions.forEach(session => {
+                    const sessionDiv = document.createElement('div');
+                    sessionDiv.className = 'session-item';
+                    
+                    sessionDiv.innerHTML = `
+                        <div class="session-header">
+                            <span class="session-name">${session.session_name || 'Unnamed Session'}</span>
+                            <span class="session-time">${session.last_updated}</span>
+                        </div>
+                        <div class="session-actions">
+                            <button onclick="loadChatHistory('${session.session_id}')">Load</button>
+                            <button onclick="deleteSession('${session.session_id}')">Delete</button>
+                        </div>
+                    `;
+                    
+                    historyList.appendChild(sessionDiv);
+                });
+
+            } catch (error) {
+                console.error("Error loading sessions:", error);
+                historyList.innerHTML = `
+                    <p class="error">Failed to load sessions</p>
+                    <p>${error.message}</p>
+                `;
             }
-            sessions.forEach(session => {
-                const btn = document.createElement('button');
-                btn.textContent = `Session: ${session[0]} (Last updated: ${session[1]})`;
-                btn.onclick = () => loadChatHistory(session[0]);
-                historyList.appendChild(btn);
-            });
         }
 
         async function loadChatHistory(sessionId) {
-            const response = await fetch(`http://localhost:5000/api/load_chat_history/${sessionId}`);
-            const history = await response.json();
-            if (history.messages) {
+            try {
+                currentSessionId = sessionId;
+                const response = await fetch(
+                    `http://localhost:5000/api/load_chat_history/${currentUserId}/${sessionId}`
+                );
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log("Chat history loaded:", result);
+                
                 chatbox.innerHTML = '';
-                history.messages.forEach(msg => appendMessage(msg.role, msg.content));
-            } else {
-                alert('No chat history found.');
+                
+                if (result.messages && result.messages.length > 0) {
+                    result.messages.forEach(msg => {
+                        if (msg.content && msg.content.trim() !== '') {
+                            appendMessage(msg.role, msg.content);
+                        }
+                    });
+                } else {
+                    appendMessage('system', 'No messages in this session yet');
+                }
+            } catch (error) {
+                console.error("Load error:", error);
+                appendMessage('system', `Failed to load chat: ${error.message}`);
+            }
+        }
+
+        initializeFirstSession();
+
+        async function deleteSession(sessionId) {
+            if (!confirm("Are you sure you want to delete this session?")) return;
+            
+            try {
+                const response = await fetch(
+                    `http://localhost:5000/api/delete_session/${currentUserId}/${sessionId}`,
+                    { method: 'DELETE' }
+                );
+                
+                if (!response.ok) {
+                    throw new Error(`Delete failed: ${response.status}`);
+                }
+                
+                // Refresh the list
+                listChatHistory();
+                chatbox.innerHTML = '';
+                appendMessage('system', 'Session deleted successfully');
+                
+            } catch (error) {
+                console.error("Delete error:", error);
+                appendMessage('system', `Failed to delete session: ${error.message}`);
             }
         }
 

@@ -44,6 +44,7 @@ class QueryEngine:
                 | StrOutputParser()
             )
             response=rag_chain.invoke(query)
+            print(retriever.invoke(query))
         else:
             # Directly interact with the Gemini model
             print("Querying Gemini model directly without context.")

@@ -13,6 +13,6 @@ langchain
 langchain-community
 langchain-google-genai
 langchain-huggingface
-redis
+redis==5.1.0
 Werkzeug
 
