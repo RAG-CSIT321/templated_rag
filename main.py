@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, UploadFile, File, HTTPException
+from fastapi import FastAPI, Request, UploadFile, File, HTTPException, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
@@ -7,13 +7,24 @@ import json
 import logging
 import threading
 import redis
-from datetime import datetime
+from datetime import datetime, timedelta
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from auth_service import AuthService, SECRET_KEY, ALGORITHM
+from fastapi import Depends, HTTPException
+from pydantic import BaseModel
 
 from file_processor import FileProcessor
 from query_engine import QueryEngine
 from chat_history_mysql import ChatHistoryMySQL
 from store_data import StoreData
+import jwt
 
+# Define a model for the request body
+class SaveMessageRequest(BaseModel):
+    user_id: str
+    session_id: str
+    role: str
+    content: str
 app = FastAPI()
 
 # Configure logging
@@ -44,7 +55,60 @@ chat_history = ChatHistoryMySQL()
 store_data = StoreData()
 store_data.store_mysql()
 file_processor.retriever = store_data.load_retriever()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+auth_service = AuthService()
 
+@app.post("/api/register")
+async def register_user(
+    request: Request  # Add this to accept raw JSON
+):
+    data = await request.json()  # Get JSON data
+    try:
+        result = auth_service.register_user(
+            data.get('username'),
+            data.get('password'),
+            data.get('email')
+        )
+        return JSONResponse(content=result)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/api/token")
+async def login_for_access_token(request: Request):
+    try:
+        # Log the raw request body for debugging
+        body = await request.body()
+        logger.info(f"Received login request body: {body}")
+        
+        if not body:
+            raise HTTPException(status_code=400, detail="Empty request body")
+            
+        try:
+            data = await request.json()
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error: {str(e)}")
+            raise HTTPException(status_code=400, detail="Invalid JSON format")
+            
+        username = data.get('username')
+        password = data.get('password')
+        
+        if not username or not password:
+            raise HTTPException(status_code=400, detail="Username and password are required")
+            
+        logger.info(f"Attempting login for user: {username}")
+        return auth_service.authenticate_user(username, password)
+    except HTTPException as e:
+        logger.error(f"HTTP Exception in login: {str(e)}")
+        raise e
+    except Exception as e:
+        logger.error(f"Unexpected error in login: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/api/me")
+async def read_users_me(token: str = Depends(oauth2_scheme)):
+    return auth_service.get_current_user(token)
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -52,18 +116,19 @@ async def home(request: Request):
     return templates.TemplateResponse("chat_ui.html", {"request": request})
 
 @app.post("/api/interact_with_agent")
-async def interact_with_agent(request: Request):
+async def interact_with_agent(request: Request, token: str = Depends(oauth2_scheme)):
+    current_user = auth_service.get_current_user(token)
     data = await request.json()
     prompt = data.get('prompt', '')
     session_id = data.get('session_id')
-    user_id = data.get('user_id')
+    user_id = current_user['user_id']
 
     if not user_id or not session_id:
         raise HTTPException(status_code=400, detail="User ID and Session ID are required")
     
     try:
         # Save user message (appends to existing messages)
-        chat_history.save_chat_message(user_id, session_id, 'user', prompt)
+        # chat_history.save_chat_message(user_id, session_id, 'user', prompt)
         
         use_context = file_processor.retriever is not None
         response = query_engine.query(file_processor.retriever, prompt, use_context=use_context)
@@ -88,6 +153,31 @@ async def interact_with_agent(request: Request):
 async def handle_options():
     return JSONResponse(content={})
 
+@app.post("/api/save_message")
+async def save_message(
+    message: SaveMessageRequest,
+    token: str = Depends(oauth2_scheme)
+):
+    """Save a single chat message for a user's session."""
+    try:
+        # Verify the user
+        current_user = auth_service.get_current_user(token)
+        if current_user['user_id'] != message.user_id:
+            raise HTTPException(status_code=403, detail="Unauthorized user")
+
+        # Save the message using ChatHistoryMySQL
+        chat_history.save_chat_message(
+            user_id=message.user_id,
+            session_id=message.session_id,
+            role=message.role,
+            content=message.content
+        )
+        
+        return JSONResponse(content={"status": "success"})
+    except Exception as e:
+        logger.error(f"Error saving message: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error saving message: {str(e)}")
+
 @app.post("/api/upload_file")
 async def upload_file(file: UploadFile = File(...)):
     if not file.filename:
@@ -111,25 +201,6 @@ async def create_new_session(user_id: str):
         "session_id": session_id
     })
 
-'''
-@app.post("/api/save_message")
-async def save_message(request: Request):
-    """Save a single message to a session"""
-    data = await request.json()
-    user_id = data.get('user_id')
-    session_id = data.get('session_id')
-    role = data.get('role')
-    content = data.get('content')
-    
-    if not all([user_id, session_id, role, content]):
-        raise HTTPException(status_code=400, detail="Missing required fields")
-    
-    try:
-        chat_history.save_message(user_id, session_id, role, content)
-        return JSONResponse(content={"status": "success"})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-'''
 
 @app.get("/api/list_chat_sessions/{user_id}")
 async def list_chat_sessions(user_id: str):
@@ -153,6 +224,33 @@ async def delete_session(user_id: str, session_id: str):
         return JSONResponse(content={"status": "success"})
     else:
         raise HTTPException(status_code=404, detail="Session not found or not owned by user")
+        
+
+@app.post("/api/refresh_token")
+async def refresh_token(request: Request):
+    try:
+        # Get the refresh token from the Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+        
+        token = auth_header.split(" ")[1]
+        current_user = auth_service.get_current_user(token)
+        
+        # Create a new access token
+        new_token = auth_service.create_access_token(
+            data={"sub": current_user['username'], "user_id": current_user['user_id']},
+            expires_delta=timedelta(minutes=30)
+        )
+        
+        return {
+            "access_token": new_token,
+            "token_type": "bearer"
+        }
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.PyJWTError as e:
+        raise HTTPException(status_code=401, detail="Invalid token")   
 
 # Remove the default session creation from load_chat_history endpoint
 @app.get("/api/load_chat_history/{user_id}/{session_id}")
@@ -175,6 +273,7 @@ async def create_new_session(user_id: str, request: Request):
         "session_id": session_id,
         "session_name": session_name or f"Chat {datetime.now().strftime('%m/%d %H:%M')}"
     })
+
     
 if __name__ == "__main__":
     import uvicorn

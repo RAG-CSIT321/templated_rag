@@ -1,6 +1,7 @@
 import mysql.connector
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
+import time 
 
 class ChatHistoryMySQL:
     def __init__(self):
@@ -20,13 +21,23 @@ class ChatHistoryMySQL:
     def _initialize_database(self):
         """Initialize the database with required tables if they don't exist."""
         cursor = self.connection.cursor()
-        
+
         # Create users table
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id VARCHAR(255) PRIMARY KEY,
             username VARCHAR(255),
             created_at DATETIME NOT NULL
+        )
+        """)
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_auth (
+            user_id VARCHAR(255) PRIMARY KEY,
+            username VARCHAR(255) UNIQUE NOT NULL,
+            email VARCHAR(255) UNIQUE,
+            password_hash VARCHAR(255) NOT NULL,
+            created_at DATETIME NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         )
         """)
         
