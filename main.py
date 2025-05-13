@@ -64,10 +64,21 @@ async def register_user(
 ):
     data = await request.json()  # Get JSON data
     try:
+        username = data.get('username')
+        password = data.get('password')
+        email = data.get('email')
+        
+        # Check if username exists before attempting registration
+        if auth_service.check_username_exists(username):
+            return JSONResponse(content={
+                "status": "error",
+                "detail": "Username already taken. Please choose another username."
+            }, status_code=400)
+            
         result = auth_service.register_user(
-            data.get('username'),
-            data.get('password'),
-            data.get('email')
+            username,
+            password,
+            email
         )
         return JSONResponse(content=result)
     except HTTPException as e:
@@ -139,7 +150,7 @@ async def interact_with_agent(request: Request, token: str = Depends(oauth2_sche
             response_content = "I don't know. Please upload relevant files to provide more context."
 
         # Save assistant response (appends to existing messages)
-        chat_history.save_chat_message(user_id, session_id, 'assistant', response_content)
+        # chat_history.save_chat_message(user_id, session_id, 'assistant', response_content)
         
         return JSONResponse(content={
             "messages": [{"role": "assistant", "content": response_content}],

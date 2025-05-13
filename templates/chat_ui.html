@@ -125,6 +125,7 @@
             <input id="signup-password" type="password" placeholder="Password">
             <button onclick="signup()">Create Account</button>
             <button onclick="showLogin()">Back to Login</button>
+            <div id="signup-error" class="auth-error"></div>
         </div>
         
         <div id="user-info" style="display: none;">
@@ -417,6 +418,23 @@
             promptInput.value = '';
 
             try {
+                // Check if a session exists, if not, create one
+                if (!currentSessionId) {
+                    const sessionResponse = await fetch('http://localhost:5000/api/create_new_session/' + currentUserId, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${currentToken}`
+                        },
+                        body: JSON.stringify({
+                            session_name: "New Chat"
+                        })
+                    });
+                    const sessionData = await sessionResponse.json();
+                    currentSessionId = sessionData.session_id;
+                }
+
+
                 // Save user message
                 let saveResponse = await fetch('http://localhost:5000/api/save_message', {
                     method: 'POST',
@@ -687,10 +705,11 @@
                 }
                 
                 // Refresh the list
-                listChatHistory();
+                await listChatHistory();
                 chatbox.innerHTML = '';
                 appendMessage('system', 'Session deleted successfully');
 
+                // Check if there are no sessions left
                 if (historyList.innerHTML.includes('No chat sessions found')) {
                     await createNewSession();
                 }

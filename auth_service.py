@@ -135,4 +135,12 @@ class AuthService:
             raise credentials_exception
         
         return {"username": username, "user_id": user_id}
+    
+    def check_username_exists(self, username: str) -> bool:
+        """Check if a username already exists in the database"""
+        cursor = self.db.connection.cursor()
+        cursor.execute("SELECT 1 FROM user_auth WHERE username = %s", (username,))
+        exists = cursor.fetchone() is not None
+        cursor.close()
+        return exists
 
