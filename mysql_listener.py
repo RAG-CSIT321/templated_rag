@@ -9,7 +9,7 @@ import hashlib
 import os
 from file_processor import FileProcessor
 class MySQLChangeListener:
-    def __init__(self, host="127.0.0.1", port=3306, user="root", password="16052004", database="movies"):
+    def __init__(self, host="127.0.0.1", port=3306, user="root", password="12345678", database="movie"):
         self.host = host
         self.port = port
         self.user = user

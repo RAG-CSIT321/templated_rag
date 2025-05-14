@@ -106,6 +106,19 @@
             color: red;
             margin-top: 10px;
         }
+
+        .upload-history-section {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #f9f9f9;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .upload-history-item {
+            margin: 5px 0;
+        }
+
     </style>
 </head>
 <body>
@@ -116,6 +129,7 @@
             <input id="login-password" type="password" placeholder="Password">
             <button onclick="login()">Login</button>
             <button onclick="showSignup()">Sign Up</button>
+            <div id="login-error" class="auth-error"></div>
         </div>
         
         <div id="signup-form" style="display: none;">
@@ -153,6 +167,7 @@
         <p id="status"></p>
     </div>
 
+
     <script>
         // Authentication state
         let currentToken = null;
@@ -174,6 +189,7 @@
         const usernameDisplay = document.getElementById('username-display');
         const loginError = document.getElementById('login-error');
         const signupError = document.getElementById('signup-error');
+        const uploadedFileHistoryList = document.getElementById('uploaded-file-history-list');
 
         // Initialize the page
         document.addEventListener('DOMContentLoaded', function() {
@@ -213,11 +229,25 @@
             const token = localStorage.getItem('auth_token');
             if (token) {
                 try {
-                    const response = await fetch('http://localhost:5000/api/me', {
+                    // First try with current token
+                    let response = await fetch('http://localhost:5000/api/me', {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }
                     });
+                    
+                    if (response.status === 401) {
+                        // Try to refresh token
+                        const refreshSuccess = await attemptTokenRefresh();
+                        if (refreshSuccess) {
+                            // Retry with new token
+                            response = await fetch('http://localhost:5000/api/me', {
+                                headers: {
+                                    'Authorization': `Bearer ${currentToken}`
+                                }
+                            });
+                        }
+                    }
                     
                     if (response.ok) {
                         const user = await response.json();
@@ -225,7 +255,10 @@
                         currentUserId = user.user_id;
                         currentUsername = user.username;
                         showUserInfo();
-                        initializeFirstSession();
+                        
+                        // Load chat history and upload history
+                        listChatHistory();
+                        listUploadedFileHistory();
                         return;
                     }
                 } catch (error) {
@@ -266,7 +299,13 @@
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ detail: 'Unknown error occurred' }));
                     console.error('Login error response:', errorData);
-                    throw new Error(errorData.detail || 'Login failed');
+                    const errorMessage = errorData.detail || 'Login failed';
+                    if (response.status === 401) {
+                        document.getElementById('login-error').textContent = 'Incorrect username or password';
+                    } else {
+                        document.getElementById('login-error').textContent = errorMessage;
+                    }
+                    return;
                 }
                 
                 const data = await response.json();
@@ -278,11 +317,14 @@
                 
                 localStorage.setItem('auth_token', currentToken);
                 showUserInfo();
-                initializeFirstSession();
                 
                 // Clear chat and history
                 chatbox.innerHTML = '';
                 historyList.innerHTML = '';
+                
+                // Load chat history and upload history
+                listChatHistory();
+                listUploadedFileHistory();
             } catch (error) {
                 console.error('Login error:', error);
                 document.getElementById('login-error').textContent = error.message;
@@ -353,30 +395,7 @@
             chatbox.scrollTop = chatbox.scrollHeight;
         }
 
-        async function initializeFirstSession() {
-            if (!currentUserId) return;
-            
-            try {
-                const response = await fetch('http://localhost:5000/api/create_new_session/' + currentUserId, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentToken}`
-                    },
-                    body: JSON.stringify({
-                        session_name: "New Chat"
-                    })
-                });
-                
-                const data = await response.json();
-                currentSessionId = data.session_id;
-                listChatHistory();
-            } catch (error) {
-                console.error("Session creation error:", error);
-                appendMessage('system', `Failed to start chat: ${error.message}`);
-            }
-        }
-
+/*
         async function createNewSession() {
             if (!currentUserId) {
                 alert("Please login first");
@@ -404,6 +423,19 @@
                 appendMessage('system', `Failed to create new session: ${error.message}`);
             }
         }
+*/
+        async function createNewSession() {
+            if (!currentUserId) {
+                alert("Please login first");
+                return;
+            }
+            
+            // Clear the chat and reset session ID
+            chatbox.innerHTML = '';
+            currentSessionId = null;
+            appendMessage('system', 'New chat started. Send a message to begin.');
+            listChatHistory();
+        }
 
         async function sendMessage() {
             if (!currentToken) {
@@ -416,43 +448,32 @@
 
             appendMessage('user', prompt);
             promptInput.value = '';
+            
+            // Add loading indicator
+            const loadingId = 'loading-' + Date.now();
+            appendMessage('system', '<div id="' + loadingId + '">Processing your request...</div>');
 
             try {
-                // Check if a session exists, if not, create one
-                if (!currentSessionId) {
-                    const sessionResponse = await fetch('http://localhost:5000/api/create_new_session/' + currentUserId, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${currentToken}`
-                        },
-                        body: JSON.stringify({
-                            session_name: "New Chat"
-                        })
-                    });
-                    const sessionData = await sessionResponse.json();
-                    currentSessionId = sessionData.session_id;
-                }
+                // Prepare the request body
+                const requestBody = {
+                    user_id: currentUserId,
+                    session_id: currentSessionId || null,  // Send null if no session ID
+                    role: 'user',
+                    content: prompt
+                };
 
+                console.log("Sending message:", requestBody);  // Debug log
 
-                // Save user message
                 let saveResponse = await fetch('http://localhost:5000/api/save_message', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${currentToken}`
                     },
-                    body: JSON.stringify({
-                        user_id: currentUserId,
-                        session_id: currentSessionId,
-                        role: 'user',
-                        content: prompt
-                    })
+                    body: JSON.stringify(requestBody)
                 });
-
                 if (saveResponse.status === 401) {
                     await attemptTokenRefresh();
-                    // Retry saving message with new token
                     saveResponse = await fetch('http://localhost:5000/api/save_message', {
                         method: 'POST',
                         headers: {
@@ -471,6 +492,9 @@
                 if (!saveResponse.ok) {
                     throw new Error(`Failed to save message: ${saveResponse.status}`);
                 }
+
+                const saveData = await saveResponse.json();
+                currentSessionId = saveData.session_id;
 
                 // Get AI response
                 let response = await fetch('http://localhost:5000/api/interact_with_agent', {
@@ -503,10 +527,13 @@
                     });
                 }
 
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.status}`);
+                // Remove loading message
+                const loadingElement = document.getElementById(loadingId);
+                if (loadingElement && loadingElement.parentNode) {
+                    loadingElement.parentNode.remove();
                 }
 
+                // Handle response
                 const data = await response.json();
                 if (data.messages && data.messages.length > 0) {
                     const assistantMessage = data.messages[0].content;
@@ -531,6 +558,13 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
+                
+                // Remove loading message if it exists
+                const loadingElement = document.getElementById(loadingId);
+                if (loadingElement && loadingElement.parentNode) {
+                    loadingElement.parentNode.remove();
+                }
+                
                 appendMessage('system', `Error: ${error.message}`);
                 if (error.message.includes('401')) {
                     alert("Session expired. Please login again.");
@@ -560,46 +594,6 @@
                 console.error('Token refresh error:', error);
                 throw error;
             }
-        }
-
-        async function checkAuthStatus() {
-            const token = localStorage.getItem('auth_token');
-            if (token) {
-                try {
-                    // First try with current token
-                    let response = await fetch('http://localhost:5000/api/me', {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
-                    
-                    if (response.status === 401) {
-                        // Try to refresh token
-                        const refreshSuccess = await attemptTokenRefresh();
-                        if (refreshSuccess) {
-                            // Retry with new token
-                            response = await fetch('http://localhost:5000/api/me', {
-                                headers: {
-                                    'Authorization': `Bearer ${currentToken}`
-                                }
-                            });
-                        }
-                    }
-                    
-                    if (response.ok) {
-                        const user = await response.json();
-                        currentToken = token;
-                        currentUserId = user.user_id;
-                        currentUsername = user.username;
-                        showUserInfo();
-                        initializeFirstSession();
-                        return;
-                    }
-                } catch (error) {
-                    console.error("Auth check failed:", error);
-                }
-            }
-            showLogin();
         }
 
         async function listChatHistory() {
@@ -731,6 +725,7 @@
                 statusText.textContent = 'No file selected';
                 return;
             }
+            statusText.textContent = 'Uploading file...';
             const formData = new FormData();
             formData.append('file', file);
 
@@ -742,13 +737,27 @@
                     },
                     body: formData
                 });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+                }
+                
                 const data = await response.json();
                 statusText.textContent = data.message || 'File processed successfully!';
+                
+                // Clear the file input
+                fileInput.value = '';
+                
+                // Refresh the uploaded files list
+                await listUploadedFileHistory();
+                
             } catch (error) {
-                statusText.textContent = 'File upload failed';
+                statusText.textContent = `File upload failed: ${error.message}`;
                 console.error('Upload error:', error);
             }
         }
+
     </script>
 </body>
 </html>

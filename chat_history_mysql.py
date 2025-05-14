@@ -14,8 +14,8 @@ class ChatHistoryMySQL:
             host="127.0.0.1",
             port=3306,
             user="root",
-            password="16052004",
-            database="movies"
+            password="12345678",
+            database="movie"
         )
 
     def _initialize_database(self):
@@ -30,6 +30,8 @@ class ChatHistoryMySQL:
             created_at DATETIME NOT NULL
         )
         """)
+
+        # Create uploaded_files table
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_auth (
             user_id VARCHAR(255) PRIMARY KEY,
@@ -40,7 +42,7 @@ class ChatHistoryMySQL:
             FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         )
         """)
-        
+
         # Create sessions table with user relationship
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS chat_sessions (
@@ -131,44 +133,54 @@ class ChatHistoryMySQL:
         self.connection.commit()
         cursor.close()
 
-    def save_chat_message(self, user_id: str, session_id: str, role: str, content: str):
-        """Append a single message to an existing session"""
+    def save_chat_message(self, user_id: str, session_id: Optional[str], role: str, content: str) -> str:
+        """Append a single message to an existing session or create a new session if it doesn't exist."""
         cursor = self.connection.cursor()
         now = datetime.now()
-        
-        # Insert the message without clearing existing ones
+
+        # Check if session exists
+        if not session_id:
+            # Generate a new session ID
+            session_id = f"sess_{now.timestamp()}_{user_id[:4]}"
+            # Create the new session
+            cursor.execute(
+                """INSERT INTO chat_sessions 
+                (session_id, user_id, session_name, created_at, last_updated) 
+                VALUES (%s, %s, %s, %s, %s)""",
+                (session_id, user_id, f"Chat {now.strftime('%m/%d %H:%M')}", now, now)
+            )
+
+        # Insert the message
         cursor.execute(
             """INSERT INTO chat_messages 
             (session_id, role, content, timestamp) 
             VALUES (%s, %s, %s, %s)""",
             (session_id, role, content, now)
         )
-        
+
         # Update session's last_updated time
         cursor.execute(
             "UPDATE chat_sessions SET last_updated = %s WHERE session_id = %s",
             (now, session_id)
         )
-        
+
         self.connection.commit()
         cursor.close()
+        return session_id
 
     def create_new_session(self, user_id: str, session_name: str = None) -> str:
         """Create a new chat session for a user and return the session ID."""
         cursor = self.connection.cursor()
         now = datetime.now()
-        
         # Generate a new session ID
         session_id = f"sess_{now.timestamp()}_{user_id[:4]}"
-        
-        # Create the new session with initial empty messages
+        # Create the new session
         cursor.execute(
             """INSERT INTO chat_sessions 
             (session_id, user_id, session_name, created_at, last_updated) 
             VALUES (%s, %s, %s, %s, %s)""",
             (session_id, user_id, session_name or f"Chat {now.strftime('%m/%d %H:%M')}", now, now)
         )
-        
         self.connection.commit()
         cursor.close()
         return session_id
@@ -260,4 +272,15 @@ class ChatHistoryMySQL:
         if hasattr(self, 'connection') and self.connection.is_connected():
             self.connection.close()
 
+
+    
+    def check_username_exists(self, username: str) -> bool:
+        """Check if a username already exists in the database"""
+        cursor = self.db.connection.cursor()
+        cursor.execute("SELECT 1 FROM user_auth WHERE username = %s", (username,))
+        exists = cursor.fetchone() is not None
+        cursor.close()
+        return exists
+
+    
 

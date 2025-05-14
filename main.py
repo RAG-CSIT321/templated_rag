@@ -19,10 +19,12 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from auth_service import AuthService, SECRET_KEY, ALGORITHM
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel
+from typing import Optional
+
 # Define a model for the request body
 class SaveMessageRequest(BaseModel):
     user_id: str
-    session_id: str
+    session_id: Optional[str] = None
     role: str
     content: str
 app = FastAPI()
@@ -49,9 +51,9 @@ templates = Jinja2Templates(directory="templates")
 
 
 # Initialize components
+chat_history = ChatHistoryMySQL()
 query_engine = QueryEngine()
 file_processor = FileProcessor(data_dir="data")
-chat_history = ChatHistoryMySQL()
 store_data = StoreData()
 store_data.store_mysql()
 file_processor.retriever = store_data.load_retriever()
@@ -129,36 +131,57 @@ async def home(request: Request):
 @app.post("/api/interact_with_agent")
 async def interact_with_agent(request: Request, token: str = Depends(oauth2_scheme)):
     current_user = auth_service.get_current_user(token)
-    data = await request.json()
-    prompt = data.get('prompt', '')
-    session_id = data.get('session_id')
+    try:
+        data = await request.json()
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON format")
+
+    logger.info(f"Received request body: {data}")
+
     user_id = current_user['user_id']
+    session_id = data.get('session_id')
+
+    if not session_id:
+        session_id = chat_history.create_new_session(
+            user_id=user_id,
+            session_name=f"Chat {datetime.now().strftime('%m/%d %H:%M')}"
+        )
+        logger.info(f"Created new session: {session_id}")
 
     if not user_id or not session_id:
+        logger.error(f"Missing user_id or session_id: user_id={user_id}, session_id={session_id}")
         raise HTTPException(status_code=400, detail="User ID and Session ID are required")
     
     try:
-        # Save user message (appends to existing messages)
-        # chat_history.save_chat_message(user_id, session_id, 'user', prompt)
+        prompt = data.get('prompt', '')
+        logger.info(f"Processing query: {prompt}")
         
+        # Process the query with or without context
         use_context = file_processor.retriever is not None
         response = query_engine.query(file_processor.retriever, prompt, use_context=use_context)
         
         # Get response content
         response_content = response.content if hasattr(response, "content") else str(response)
         if not response_content.strip():
-            response_content = "I don't know. Please upload relevant files to provide more context."
-
-        # Save assistant response (appends to existing messages)
-        # chat_history.save_chat_message(user_id, session_id, 'assistant', response_content)
+            response_content = "I don't have enough information to answer that question. Please upload relevant files to provide more context."
         
         return JSONResponse(content={
             "messages": [{"role": "assistant", "content": response_content}],
             "session_id": session_id
         })
     except Exception as e:
-        logging.error(f"Error in QueryEngine: {e}")
-        raise HTTPException(status_code=500, detail=f"Query Engine Error: {str(e)}")
+        logger.error(f"Error processing query: {str(e)}")
+        # Return a graceful error message instead of server error
+        return JSONResponse(
+            content={
+                "messages": [{
+                    "role": "assistant", 
+                    "content": "I'm sorry, I encountered an issue processing your question. Please try again or upload some relevant documents to help me answer better."
+                }],
+                "session_id": session_id
+            },
+            status_code=200
+        )
 
 @app.options("/api/interact_with_agent")
 async def handle_options():
@@ -169,37 +192,62 @@ async def save_message(
     message: SaveMessageRequest,
     token: str = Depends(oauth2_scheme)
 ):
-    """Save a single chat message for a user's session."""
+    """Save a single chat message for a user's session. Creates session if needed."""
     try:
         # Verify the user
         current_user = auth_service.get_current_user(token)
         if current_user['user_id'] != message.user_id:
             raise HTTPException(status_code=403, detail="Unauthorized user")
 
-        # Save the message using ChatHistoryMySQL
+        # If no session_id provided, create a new session
+        if not message.session_id:
+            session_id = chat_history.create_new_session(
+                user_id=message.user_id,
+                session_name=f"Chat {datetime.now().strftime('%m/%d %H:%M')}"
+            )
+        else:
+            session_id = message.session_id
+
+        # Save the message
         chat_history.save_chat_message(
             user_id=message.user_id,
-            session_id=message.session_id,
+            session_id=session_id,
             role=message.role,
             content=message.content
         )
         
-        return JSONResponse(content={"status": "success"})
+        return JSONResponse(content={"status": "success", "session_id": session_id})
     except Exception as e:
         logger.error(f"Error saving message: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error saving message: {str(e)}")
 
 @app.post("/api/upload_file")
-async def upload_file(file: UploadFile = File(...)):
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No selected file")
+async def upload_file(file: UploadFile = File(...), token: str = Depends(oauth2_scheme)):
+    try:
+        # Get user from token
+        current_user = auth_service.get_current_user(token)
+        user_id = current_user['user_id']
+        
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="No selected file")
 
-    file_path = os.path.join("data", file.filename)
-    with open(file_path, "wb") as buffer:
-        buffer.write(await file.read())
-    
-    result = file_processor.process_file(file_path)
-    return JSONResponse(content={"message": result})
+        file_path = os.path.join("data", file.filename)
+        with open(file_path, "wb") as buffer:
+            buffer.write(await file.read())
+        
+        logger.info(f"Processing file {file.filename} for user {user_id}")
+        result = file_processor.process_file(file_path, user_id)
+        
+        # Trigger upload history refresh for the client
+        return JSONResponse(content={
+            "message": result,
+            "status": "success",
+            "file_path": file_path,
+            "file_name": file.filename
+        })
+    except Exception as e:
+        logger.error(f"Upload file error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
 # Add these new endpoints:
 
@@ -285,7 +333,7 @@ async def create_new_session(user_id: str, request: Request):
         "session_name": session_name or f"Chat {datetime.now().strftime('%m/%d %H:%M')}"
     })
 
-    
+
 if __name__ == "__main__":
     import uvicorn
 

@@ -5,8 +5,8 @@ def embedding_mysql():
         host="127.0.0.1",
         port=3306,
         user="root",
-        password="16052004",
-        database="movies"
+        password="12345678",
+        database="movie"
     )
     cursor = conn.cursor()
     # Query

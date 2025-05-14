@@ -1,7 +1,7 @@
 import bcrypt
 import jwt
 from datetime import datetime, timedelta
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 from chat_history_mysql import ChatHistoryMySQL
 import os
 from typing import Optional
@@ -100,10 +100,17 @@ class AuthService:
         user = cursor.fetchone()
         cursor.close()
         
-        if not user or not self.verify_password(password, user['password_hash']):
+        if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
+                detail="Username does not exist",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        if not self.verify_password(password, user['password_hash']):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
