@@ -155,11 +155,19 @@ async def interact_with_agent(request: Request, token: str = Depends(oauth2_sche
     try:
         prompt = data.get('prompt', '')
         logger.info(f"Processing query: {prompt}")
+
+        # Load chat history from MySQL
+        history = chat_history.load_chat_history(user_id, session_id)
+        chat_messages = history.get('messages', []) if history else []
         
-        # Process the query with or without context
+        # Process the query with chat history
         use_context = file_processor.retriever is not None
-        response = query_engine.query(file_processor.retriever, prompt, use_context=use_context)
-        
+        response = query_engine.query(
+            file_processor.retriever, 
+            prompt, 
+            use_context=use_context,
+            chat_history=chat_messages  # Pass the loaded messages to query engine
+        )
         # Get response content
         response_content = response.content if hasattr(response, "content") else str(response)
         if not response_content.strip():

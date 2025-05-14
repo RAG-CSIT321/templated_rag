@@ -74,13 +74,21 @@ class ChatHistoryMySQL:
         """Create a user record if it doesn't exist."""
         cursor = self.connection.cursor()
         
+        # It's still good to check first to minimize writes/locks if not necessary,
+        # but INSERT IGNORE will handle the race condition.
         cursor.execute("SELECT 1 FROM users WHERE user_id = %s", (user_id,))
         if not cursor.fetchone():
-            cursor.execute(
-                "INSERT INTO users (user_id, username, created_at) VALUES (%s, %s, %s)",
-                (user_id, username, datetime.now())
-            )
-            self.connection.commit()
+            try:
+                cursor.execute(
+                    "INSERT IGNORE INTO users (user_id, username, created_at) VALUES (%s, %s, %s)",
+                    (user_id, username, datetime.now())
+                )
+                self.connection.commit()
+            except mysql.connector.Error as err:
+                # Log the error, though INSERT IGNORE should prevent IntegrityError
+                print(f"Error during INSERT IGNORE in create_user_if_not_exists: {err}")
+                # Optionally, re-raise if it's an unexpected error
+                # raise
         
         cursor.close()
 

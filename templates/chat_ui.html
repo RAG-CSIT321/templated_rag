@@ -2,171 +2,662 @@
 <html>
 <head>
     <link rel="icon" href="data:,">
-    <title>Chatbot and File Upload</title>
+    <title>AI Assistant</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        h1 {
-            color: #333;
-        }
-        .message {
-            margin-bottom: 10px;
-        }
-        .user {
-            color: blue;
-            font-weight: bold;
-        }
-        .assistant {
-            color: green;
-            font-weight: bold;
-        }
-        #chatbox {
-            border: 1px solid #ccc;
-            padding: 10px;
-            height: 400px;
-            overflow-y: scroll;
-            background-color: #FFFFFF;
-        }
-        input[type="text"] {
-            width: 80%;
-            padding: 10px;
-            margin-top: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            background-color: #EFEFEF;
-        }
-        button {
-            padding: 10px;
-            margin-top: 10px;
-            background-color: #483D8B;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        .upload-section,
-        .history-section {
-            margin-top: 20px;
-        }
-        .upload-section input[type="file"] {
-            margin-bottom: 10px;
-        }
-        #status {
-            font-size: 13px;
-            color: #000000;
-            margin-top: 10px;
-        }
-        .history-section {
-            max-height: 200px;
-            overflow-y: auto;
-            border: 1px solid #ccc;
-            padding: 10px;
-            background-color: #f9f9f9;
-        }
-        .history-item {
-            margin: 5px 0;
-        }
-        #history-list {
-            margin-top: 20px;
-            border: 1px solid #ccc;
-            padding: 10px;
+        :root {
+            --primary-color: #20C997; /* Bright Green for buttons/accents */
+            --primary-hover: #1BAD82; /* Darker shade of primary */
+            --sidebar-bg: #2A393E;    /* Dark Slate Green/Gray for sidebar */
+            --chat-bg: #FFFFFF;       /* White for main chat area */
+            --message-bg-user: #E8F5E9; /* Very Light Green for user messages */
+            --message-bg-assistant: #FFFFFF; /* White for assistant messages */
+            --text-color: #333333;    /* Dark Gray for text on light backgrounds */
+            --text-color-sidebar: #E0E0E0; /* Light Gray/White for text on dark sidebar */
+            --text-color-secondary: #777777; /* Medium Gray for secondary text */
+            --border-color: #E0E0E0;  /* Light Gray for borders */
+            --input-bg: #F7F7F7;      /* Very Light Gray for input fields */
+            --button-text-color: #FFFFFF; /* White for text on primary buttons */
+            --error-color: #D32F2F;   /* Standard Red */
+
+            /* New Welcome Screen Specific Colors */
+            --welcome-title-color: #F39C12; /* Orange for "Hello!" */
+            --welcome-subtitle-color: #34495E; /* Dark Blue/Gray for "How can I help..." */
+            --welcome-prompt-bg: #4A6A77;    /* Dark Teal/Blue for suggestion boxes */
+            --welcome-prompt-text-color: #FFFFFF; /* White for text in suggestion boxes */
+            --welcome-prompt-hover-bg: #5A7A87; /* Slightly lighter for hover */
         }
 
-        /*Auth Section*/
-        #auth-section {
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #f5f5f5;
-            border-radius: 5px;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-        #auth-section-input {
-            display: block;
-            margin: 10px 0;
-            padding: 8px;
-            width: 200px;
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            background-color: var(--chat-bg);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
         }
-        #auth-section button {
-            margin-right: 10px;
-            padding: 8px 15px;
+
+        /* Sidebar styles */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            transition: transform 0.3s ease;
+            z-index: 10;
         }
-        #user-info {
+
+        .sidebar-header {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            background-color: var(--primary-color);
+            color: var(--button-text-color);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 15px;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
         }
-        #username-display {
+
+        .new-chat-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .history-item {
+            padding: 10px 12px;
+            margin: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 14px;
+            color: var(--text-color-sidebar); /* Added for sidebar text */
+            position: relative; /* For delete button */
+            padding-right: 40px; /* Space for delete button */
+        }
+
+        .history-item:hover {
+            background-color: #3A5057; /* Darker hover for dark sidebar */
+        }
+
+        .history-item.active {
+            background-color: var(--primary-color); /* Active chat uses primary color */
+            color: var(--button-text-color);
+        }
+        .history-item.active .delete-history-btn,
+        .history-item.active div[style*="color: var(--text-color-dark)"] {
+            color: var(--button-text-color); /* Make sure nested elements also adapt */
+        }
+
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .user-info:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--button-text-color);
             font-weight: bold;
         }
-        .auth-error {
-            color: red;
-            margin-top: 10px;
+
+        .user-name {
+            font-size: 14px;
+            flex: 1;
+            color: var(--text-color-sidebar); /* Added for sidebar text */
         }
 
-        .upload-history-section {
-            margin-top: 20px;
-            border: 1px solid #ccc;
-            padding: 10px;
-            background-color: #f9f9f9;
-            max-height: 200px;
+        /* Main chat area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+        }
+
+        .chat-header {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--chat-bg); /* Ensure header matches chat bg */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+        }
+
+        .chat-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-color); /* Ensure title uses main text color */
+        }
+
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            color: var(--text-color); /* Ensure toggle uses main text color */
+            cursor: pointer;
+            font-size: 20px;
+            display: none;
+        }
+
+        .chat-container {
+            flex: 1;
             overflow-y: auto;
-        }
-        .upload-history-item {
-            margin: 5px 0;
+            padding: 20px;
+            scroll-behavior: smooth;
         }
 
+        .message {
+            padding: 10px 0; /* Reduced vertical padding */
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            gap: 15px; /* Slightly reduced gap */
+        }
+
+        .message-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message.user-message .message-content {
+            align-items: flex-end;
+        }
+        .message.assistant-message .message-content {
+            align-items: flex-start;
+        }
+
+        .message-role {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: var(--text-color-secondary);
+        }
+
+        .message-bubble {
+            padding: 10px 15px;
+            border-radius: 18px;
+            max-width: 75%;
+            line-height: 1.5;
+            word-wrap: break-word; /* Ensure long words break */
+        }
+
+        .message.user-message .message-bubble {
+            background-color: var(--message-bg-user);
+            color: var(--text-color);
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.assistant-message .message-bubble {
+            background-color: var(--message-bg-assistant);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-text {
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .message-text p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-text code {
+            background-color: rgba(0, 0, 0, 0.05); /* Lighter code bg for light theme */
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: var(--text-color);
+        }
+
+        .message-text pre {
+            background-color: rgba(0, 0, 0, 0.05); /* Lighter pre bg */
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 12px 0;
+            color: var(--text-color);
+        }
+
+
+        /* Input area */
+        .input-container {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .input-box {
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Subtle shadow for input box */
+            border-radius: 8px; /* Rounded input box */
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px 48px 12px 16px;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px; /* Match input-box rounding */
+            color: var(--text-color);
+            font-size: 16px;
+            resize: none;
+            min-height: 60px;
+            max-height: 200px;
+            outline: none;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary-color);
+        }
+
+        .send-button {
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            background-color: var(--primary-color);
+            color: var(--button-text-color);
+            border: none;
+            border-radius: 6px; /* Slightly rounded button */
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .send-button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .send-button:disabled {
+            background-color: var(--border-color);
+            cursor: not-allowed;
+        }
+
+
+        /* Auth modal */
+        .auth-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .auth-container {
+            background-color: var(--sidebar-bg);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .auth-title {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: #E0E0E0;
+        }
+
+        .auth-subtitle {
+            color: white; /* This was from old theme, should be --text-color-sidebar for dark modals */
+            font-size: 14px;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-color);
+            font-size: 14px;
+        }
+
+        .auth-input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        .auth-button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .auth-button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .auth-switch {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 14px;
+            color: #E0E0E0;
+        }
+
+        .auth-switch-button {
+            color: var(--primary-color);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .auth-error {
+            color: var(--error-color);
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        /* Loading indicator */
+        .loading-indicator {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--text-color-dark);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        .loading-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.visible {
+                transform: translateX(0);
+            }
+            
+            .sidebar-toggle {
+                display: block;
+            }
+            
+            .message {
+                gap: 12px;
+            }
+            
+            .input-container {
+                padding: 12px;
+            }
+        }
+
+        /* Markdown-like formatting */
+        .message-text strong {
+            font-weight: bold;
+        }
+        
+        .message-text em {
+            font-style: italic;
+        }
+        
+        .message-text ul, 
+        .message-text ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+            color: var(--text-color); /* Ensure list text color */
+        }
+
+        /* Welcome Screen Styles */
+        #welcome-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px; /* Reduced padding */
+            flex-grow: 1; /* Allow it to take available space */
+            height: 100%;
+        }
+
+        .welcome-title {
+            font-size: 42px;
+            font-weight: bold;
+            color: var(--welcome-title-color);
+            margin-bottom: 12px;
+        }
+
+        .welcome-subtitle {
+            font-size: 20px;
+            color: var(--welcome-subtitle-color);
+            margin-bottom: 30px;
+        }
+
+        .welcome-prompts {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .welcome-prompt-box {
+            background-color: var(--welcome-prompt-bg);
+            color: var(--welcome-prompt-text-color);
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s ease;
+            text-align: left;
+            line-height: 1.4;
+        }
+
+        .welcome-prompt-box:hover {
+            background-color: var(--welcome-prompt-hover-bg);
+        }
+
+        /* Add these new styles for delete button */
+        .delete-history-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-color-sidebar); /* Use sidebar text color for icon */
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .history-item:hover .delete-history-btn {
+            opacity: 1;
+        }
+
+        .delete-history-btn:hover {
+            color: var(--error-color);
+        }
     </style>
 </head>
 <body>
-    <div id="auth-section">
-        <div id="login-form" style="display: none;">
-            <h2>Login</h2>
-            <input id="login-username" type="text" placeholder="Username">
-            <input id="login-password" type="password" placeholder="Password">
-            <button onclick="login()">Login</button>
-            <button onclick="showSignup()">Sign Up</button>
-            <div id="login-error" class="auth-error"></div>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <button class="new-chat-btn" onclick="createNewSession()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 4V20M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                New chat
+            </button>
+        </div>
+        <div class="history-list" id="history-list"></div>
+        <div class="sidebar-footer">
+            <div class="user-info" id="user-info" onclick="toggleUserMenu()">
+                <div class="user-avatar" id="user-avatar">U</div>
+                <div class="user-name" id="username-display">User</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="chat-header">
+            <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <div class="chat-title" id="chat-title">ChatWithMe</div>
+            <div></div> <!-- Spacer for flex alignment -->
         </div>
         
-        <div id="signup-form" style="display: none;">
-            <h2>Sign Up</h2>
-            <input id="signup-username" type="text" placeholder="Username">
-            <input id="signup-email" type="email" placeholder="Email (optional)">
-            <input id="signup-password" type="password" placeholder="Password">
-            <button onclick="signup()">Create Account</button>
-            <button onclick="showLogin()">Back to Login</button>
-            <div id="signup-error" class="auth-error"></div>
+        <div class="chat-container" id="chatbox">
+            <div id="welcome-screen">
+                <h1 class="welcome-title">Hello!</h1>
+                <h2 class="welcome-subtitle">How can I help you today?</h2>
+                <div class="welcome-prompts">
+                    <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Which gaming laptop should I buy?')">Which gaming laptop should I buy?</div>
+                    <div class="welcome-prompt-box" onclick="sendWelcomePrompt('What is the latest iphone right now?')">What is the latest iphone right now?</div>
+                    <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Compare between Dell and Macbook? Which one is better?')">Compare between Dell and Macbook? Which one is better?</div>
+                    <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Which laptop is the most suitable for Computer Science?')">Which laptop is the most suitable for Computer Science?</div>
+                </div>
+            </div>
+            <!-- Messages will be appended here -->
         </div>
         
-        <div id="user-info" style="display: none;">
-            <span id="username-display"></span>
-            <button onclick="logout()">Logout</button>
+        <div class="input-container">
+            <div class="input-box">
+                <textarea class="input-field" id="prompt" placeholder="Enter a prompt here" rows="1"></textarea>
+                <button class="send-button" id="send-button" onclick="sendMessage()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="status-text" id="status"></div>
         </div>
     </div>
-    
-    <h1>Chatbot</h1>
-    <div id="chatbox"></div>
-    <input id="prompt" type="text" placeholder="Type your message...">
-    <button onclick="sendMessage()">Send</button>
-    <button onclick="createNewSession()">New Chat</button>
 
-    <div class="history-section">
-        <h2>Chat History</h2>
-        <button onclick="listChatHistory()">Load History Sessions</button>
-        <div id="history-list"></div>
+    <!-- Auth Modal -->
+    <div class="auth-modal" id="auth-modal" style="display: none;">
+        <div class="auth-container">
+            <div class="auth-header">
+                <div class="auth-title" id="auth-title">Welcome</div>
+                <div class="auth-subtitle" id="auth-subtitle">Sign in to continue</div>
+            </div>
+            
+            <div id="login-form">
+                <form class="auth-form" onsubmit="event.preventDefault(); login();">
+                    <input type="text" class="auth-input" id="login-username" placeholder="Username" required>
+                    <input type="password" class="auth-input" id="login-password" placeholder="Password" required>
+                    <button type="submit" class="auth-button">Sign In</button>
+                    <div class="auth-error" id="login-error"></div>
+                </form>
+                <div class="auth-switch">
+                    Don't have an account yet? <button class="auth-switch-button" onclick="showSignup()">Sign up</button>
+                </div>
+            </div>
+            
+            <div id="signup-form" style="display: none;">
+                <form class="auth-form" onsubmit="event.preventDefault(); signup();">
+                    <input type="text" class="auth-input" id="signup-username" placeholder="Username" required>
+                    <input type="email" class="auth-input" id="signup-email" placeholder="Email (optional)">
+                    <input type="password" class="auth-input" id="signup-password" placeholder="Password" required>
+                    <button type="submit" class="auth-button">Create Account</button>
+                    <div class="auth-error" id="signup-error"></div>
+                </form>
+                <div class="auth-switch">
+                    Already have an account? <button class="auth-switch-button" onclick="showLogin()">Sign in</button>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="upload-section">
-        <h2>Upload a File for Processing</h2>
-        <input id="file-input" type="file" accept=".txt,.pdf,.csv,.png,.jpg,.jpeg">
-        <button onclick="uploadFile()">Upload</button>
-        <p id="status"></p>
-    </div>
-
 
     <script>
         // Authentication state
@@ -174,57 +665,127 @@
         let currentUserId = null;
         let currentUsername = null;
         let currentSessionId = null;
+        let isSidebarVisible = true;
 
-        //DOM elements
+        // DOM elements
         const chatbox = document.getElementById('chatbox');
         const promptInput = document.getElementById('prompt');
         const fileInput = document.getElementById('file-input');
+        const fileNameDisplay = document.getElementById('file-name');
+        const removeFileButton = document.getElementById('remove-file');
         const statusText = document.getElementById('status');
         const historyList = document.getElementById('history-list');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const chatTitle = document.getElementById('chat-title');
+        const sendButton = document.getElementById('send-button');
         
         // Auth DOM Elements
+        const authModal = document.getElementById('auth-modal');
         const loginForm = document.getElementById('login-form');
         const signupForm = document.getElementById('signup-form');
         const userInfo = document.getElementById('user-info');
         const usernameDisplay = document.getElementById('username-display');
+        const userAvatar = document.getElementById('user-avatar');
         const loginError = document.getElementById('login-error');
         const signupError = document.getElementById('signup-error');
-        const uploadedFileHistoryList = document.getElementById('uploaded-file-history-list');
+        const authTitle = document.getElementById('auth-title');
+        const authSubtitle = document.getElementById('auth-subtitle');
 
         // Initialize the page
         document.addEventListener('DOMContentLoaded', function() {
-            checkAuthStatus();
+            if (localStorage.getItem('auth_token')) { // Only create new session if logged in
+                createNewSession(); // To show welcome screen or load history
+            } else {
+                showAuthModal(); // If not logged in, show auth modal
+            }
             
-            // Set up enter key for prompt
+            // Set up enter key for prompt (shift+enter for new line)
             promptInput.addEventListener('keydown', function(event) {
-                if (event.key === 'Enter') {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
                     sendMessage();
                 }
             });
+            
+            // Auto-resize textarea
+            promptInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+            
+            // Handle file input change
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    fileNameDisplay.textContent = this.files[0].name;
+                    removeFileButton.style.display = 'block';
+                } else {
+                    fileNameDisplay.textContent = '';
+                    removeFileButton.style.display = 'none';
+                }
+            });
+            
+            // Handle remove file button
+            removeFileButton.addEventListener('click', function() {
+                fileInput.value = '';
+                fileNameDisplay.textContent = '';
+                this.style.display = 'none';
+            });
+            
+            // Check screen size for sidebar
+            checkScreenSize();
+            window.addEventListener('resize', checkScreenSize);
         });
 
+        function checkScreenSize() {
+            if (window.innerWidth <= 768) {
+                isSidebarVisible = false;
+                sidebar.classList.remove('visible');
+            } else {
+                isSidebarVisible = true;
+                sidebar.classList.add('visible');
+            }
+        }
+
+        function toggleSidebar() {
+            isSidebarVisible = !isSidebarVisible;
+            sidebar.classList.toggle('visible', isSidebarVisible);
+        }
+
         // Auth Functions
+        function showAuthModal() {
+            authModal.style.display = 'flex';
+            showLogin();
+        }
+
+        function hideAuthModal() {
+            authModal.style.display = 'none';
+        }
+
         function showLogin() {
             loginForm.style.display = 'block';
             signupForm.style.display = 'none';
-            userInfo.style.display = 'none';
+            authTitle.textContent = 'Welcome back';
+            authSubtitle.textContent = 'Sign in to continue';
             loginError.textContent = '';
+            if (document.getElementById('signup-username')) document.getElementById('login-username').value = document.getElementById('signup-username').value;
         }
 
         function showSignup() {
             loginForm.style.display = 'none';
             signupForm.style.display = 'block';
-            userInfo.style.display = 'none';
+            authTitle.textContent = 'Create account';
+            authSubtitle.textContent = 'Get started with your AI assistant';
             signupError.textContent = '';
+            if (document.getElementById('login-username')) document.getElementById('signup-username').value = document.getElementById('login-username').value;
         }
 
         function showUserInfo() {
-            loginForm.style.display = 'none';
-            signupForm.style.display = 'none';
-            userInfo.style.display = 'block';
             usernameDisplay.textContent = currentUsername;
+            userAvatar.textContent = currentUsername.charAt(0).toUpperCase();
+            hideAuthModal();
         }
-
+        
         async function checkAuthStatus() {
             const token = localStorage.getItem('auth_token');
             if (token) {
@@ -258,22 +819,34 @@
                         
                         // Load chat history and upload history
                         listChatHistory();
-                        listUploadedFileHistory();
                         return;
                     }
                 } catch (error) {
                     console.error("Auth check failed:", error);
                 }
             }
-            showLogin();
+            showAuthModal();
         }
-
+        // New function to handle welcome prompt clicks
+        function sendWelcomePrompt(promptText) {
+            if (!currentToken) { // Ensure user is logged in
+                showAuthModal();
+                return;
+            }
+            promptInput.value = promptText;
+            sendMessage();
+            // Hide welcome screen immediately after clicking a prompt
+            const welcomeScreen = document.getElementById('welcome-screen');
+            if (welcomeScreen) {
+                welcomeScreen.style.display = 'none';
+            }
+        }
         async function login() {
             const username = document.getElementById('login-username').value;
             const password = document.getElementById('login-password').value;
             
             if (!username || !password) {
-                document.getElementById('login-error').textContent = 'Please enter both username and password';
+                loginError.textContent = 'Please enter both username and password';
                 return;
             }
             
@@ -282,8 +855,6 @@
                     username: username,
                     password: password
                 };
-                
-                console.log('Sending login request:', requestBody);
                 
                 const response = await fetch('http://localhost:5000/api/token', {
                     method: 'POST',
@@ -294,40 +865,38 @@
                     body: JSON.stringify(requestBody)
                 });
                 
-                console.log('Response status:', response.status);
-                
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ detail: 'Unknown error occurred' }));
-                    console.error('Login error response:', errorData);
                     const errorMessage = errorData.detail || 'Login failed';
                     if (response.status === 401) {
-                        document.getElementById('login-error').textContent = 'Incorrect username or password';
+                        loginError.textContent = 'Incorrect username or password';
                     } else {
-                        document.getElementById('login-error').textContent = errorMessage;
+                        loginError.textContent = errorMessage;
                     }
                     return;
                 }
                 
                 const data = await response.json();
-                console.log('Login successful:', data);
-                
                 currentToken = data.access_token;
                 currentUserId = data.user_id;
                 currentUsername = username;
                 
                 localStorage.setItem('auth_token', currentToken);
                 showUserInfo();
+                sendWelcomePrompt(promptText)
                 
                 // Clear chat and history
                 chatbox.innerHTML = '';
                 historyList.innerHTML = '';
                 
-                // Load chat history and upload history
+                // Load chat history
                 listChatHistory();
-                listUploadedFileHistory();
+                
+                // Start a new session
+                await createNewSession();
             } catch (error) {
                 console.error('Login error:', error);
-                document.getElementById('login-error').textContent = error.message;
+                loginError.textContent = error.message;
             }
         }
 
@@ -342,10 +911,6 @@
             }
             
             try {
-                const formData = new FormData();
-                formData.append('username', username);
-                formData.append('password', password);
-            if (email) formData.append('email', email);
                 const response = await fetch('http://localhost:5000/api/register', {
                     method: 'POST',
                     headers: {
@@ -380,66 +945,120 @@
             currentUsername = null;
             currentSessionId = null;
             localStorage.removeItem('auth_token');
-            showLogin();
-            chatbox.innerHTML = '';
-            historyList.innerHTML = '';
-        }
-        
-        // Chat Functions
+            
+            // Clear chat area and show welcome screen (or it will be handled by checkAuthStatus->showAuthModal)
+            const welcomeScreen = document.getElementById('welcome-screen');
+            const messages = Array.from(chatbox.children).filter(child => child.id !== 'welcome-screen');
+            messages.forEach(msg => msg.remove());
+            if (welcomeScreen) {
+                welcomeScreen.style.display = 'flex';
+            }
+            chatTitle.textContent = "ChatWithMe";
 
+            historyList.innerHTML = '';
+            showAuthModal(); // This should be the primary action
+        }
+
+        function toggleUserMenu() {
+            // In a real app, you might show a dropdown menu here
+            if (confirm("Do you want to logout?")) {
+                logout();
+            }
+        }
+
+        // Chat Functions
         function appendMessage(role, content) {
-            const div = document.createElement('div');
-            div.className = 'message';
-            div.innerHTML = `<span class="${role}">${role}:</span> ${content}`;
-            chatbox.appendChild(div);
+            const welcomeScreen = document.getElementById('welcome-screen');
+            if (welcomeScreen && welcomeScreen.style.display !== 'none') {
+                welcomeScreen.style.display = 'none';
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role === 'user' ? 'user-message' : 'assistant-message'}`;
+            
+            const avatarName = role === 'user' ? 
+                (currentUsername ? currentUsername.charAt(0).toUpperCase() : 'U') : 
+                'AI';
+            const displayName = role === 'user' ? (currentUsername || 'User') : 'Assistant';
+                
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="message-role">${displayName}</div>
+                    <div class="message-bubble">
+                        <div class="message-text">${formatMessageContent(content)}</div>
+                    </div>
+                </div>
+            `;
+            
+            chatbox.appendChild(messageDiv);
             chatbox.scrollTop = chatbox.scrollHeight;
         }
 
-/*
-        async function createNewSession() {
-            if (!currentUserId) {
-                alert("Please login first");
-                return;
-            }
+        function formatMessageContent(content) {
+            // Simple markdown formatting
+            let formatted = content
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // bold
+                .replace(/\*(.*?)\*/g, '<em>$1</em>') // italic
+                .replace(/`(.*?)`/g, '<code>$1</code>') // inline code
+                .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>'); // code blocks
             
-            try {
-                const response = await fetch('http://localhost:5000/api/create_new_session/' + currentUserId, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentToken}`
-                    },
-                    body: JSON.stringify({
-                        session_name: "New Chat"
-                    })
-                });
-                
-                const data = await response.json();
-                currentSessionId = data.session_id;
-                chatbox.innerHTML = '';
-                listChatHistory();
-            } catch (error) {
-                console.error("Error creating new session:", error);
-                appendMessage('system', `Failed to create new session: ${error.message}`);
-            }
+            // Convert line breaks to paragraphs
+            formatted = formatted.split('\n\n').map(para => {
+                if (para.trim() === '') return '';
+                return `<p>${para.replace(/\n/g, '<br>')}</p>`;
+            }).join('');
+            
+            return formatted;
         }
-*/
+
+        function showLoadingIndicator() {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message assistant-message'; // Added assistant-message for styling consistency
+            loadingDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="message-role">Assistant</div>
+                    <div class="message-bubble">
+                        <div class="message-text">
+                            <div class="loading-indicator">
+                                <div class="loading-dot"></div>
+                                <div class="loading-dot"></div>
+                                <div class="loading-dot"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatbox.appendChild(loadingDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+            return loadingDiv;
+        }
+
         async function createNewSession() {
             if (!currentUserId) {
-                alert("Please login first");
+                // This case should ideally be handled by auth checks before calling createNewSession
+                // If called without user_id, it might mean user logged out and we need to reset UI
+                // showAuthModal(); // not here, let higher level logic handle auth modal
                 return;
             }
             
-            // Clear the chat and reset session ID
-            chatbox.innerHTML = '';
-            currentSessionId = null;
-            appendMessage('system', 'New chat started. Send a message to begin.');
-            listChatHistory();
+            currentSessionId = null; // Reset session ID
+            // chatTitle.textContent = 'ChatWithMe'; // Keep main title or update based on new chat logic
+
+            // Clear only messages, keep/show welcome screen structure
+            const welcomeScreen = document.getElementById('welcome-screen');
+            const messages = Array.from(chatbox.children).filter(child => child.id !== 'welcome-screen');
+            messages.forEach(msg => msg.remove());
+
+            if (welcomeScreen) {
+                welcomeScreen.style.display = 'flex';
+            }
+            
+            await listChatHistory(); // Refresh history list, new chat won't be active yet
         }
 
         async function sendMessage() {
             if (!currentToken) {
-                alert("Please login first");
+                showAuthModal();
                 return;
             }
             
@@ -448,22 +1067,24 @@
 
             appendMessage('user', prompt);
             promptInput.value = '';
+            promptInput.style.height = 'auto';
             
-            // Add loading indicator
-            const loadingId = 'loading-' + Date.now();
-            appendMessage('system', '<div id="' + loadingId + '">Processing your request...</div>');
-
+            // Disable send button while processing
+            sendButton.disabled = true;
+            
+            // Show loading indicator
+            const loadingDiv = showLoadingIndicator();
+            
             try {
                 // Prepare the request body
                 const requestBody = {
                     user_id: currentUserId,
-                    session_id: currentSessionId || null,  // Send null if no session ID
+                    session_id: currentSessionId || null,
                     role: 'user',
                     content: prompt
                 };
 
-                console.log("Sending message:", requestBody);  // Debug log
-
+                // Save user message
                 let saveResponse = await fetch('http://localhost:5000/api/save_message', {
                     method: 'POST',
                     headers: {
@@ -472,6 +1093,7 @@
                     },
                     body: JSON.stringify(requestBody)
                 });
+                
                 if (saveResponse.status === 401) {
                     await attemptTokenRefresh();
                     saveResponse = await fetch('http://localhost:5000/api/save_message', {
@@ -480,12 +1102,7 @@
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${currentToken}`
                         },
-                        body: JSON.stringify({
-                            user_id: currentUserId,
-                            session_id: currentSessionId,
-                            role: 'user',
-                            content: prompt
-                        })
+                        body: JSON.stringify(requestBody)
                     });
                 }
 
@@ -495,7 +1112,24 @@
 
                 const saveData = await saveResponse.json();
                 currentSessionId = saveData.session_id;
-
+                
+                if (saveData.session_id && !currentSessionId) {
+                    currentSessionId = saveData.session_id;
+                    // If it was a new session, listChatHistory might be needed to highlight it
+                    // or update its name if first message defines it
+                    const firstUserMessageContent = prompt;
+                    if (firstUserMessageContent) {
+                         // Update the title optimistically for new chats
+                        // chatTitle.textContent = firstUserMessageContent.length > 30 ?
+                        //    firstUserMessageContent.substring(0, 30) + '...' :
+                        //    firstUserMessageContent;
+                    }
+                    await listChatHistory(); // Refresh to show new session
+                } else if (saveData.session_id && saveData.session_id !== currentSessionId) {
+                    currentSessionId = saveData.session_id; // Should not happen if session_id is passed correctly
+                    await listChatHistory();
+                }
+                
                 // Get AI response
                 let response = await fetch('http://localhost:5000/api/interact_with_agent', {
                     method: 'POST',
@@ -528,10 +1162,7 @@
                 }
 
                 // Remove loading message
-                const loadingElement = document.getElementById(loadingId);
-                if (loadingElement && loadingElement.parentNode) {
-                    loadingElement.parentNode.remove();
-                }
+                loadingDiv.remove();
 
                 // Handle response
                 const data = await response.json();
@@ -556,13 +1187,15 @@
                 } else {
                     throw new Error('Invalid response format');
                 }
+                
+                // Update chat history
+                await listChatHistory();
             } catch (error) {
                 console.error('Error:', error);
                 
                 // Remove loading message if it exists
-                const loadingElement = document.getElementById(loadingId);
-                if (loadingElement && loadingElement.parentNode) {
-                    loadingElement.parentNode.remove();
+                if (loadingDiv && loadingDiv.parentNode) {
+                    loadingDiv.remove();
                 }
                 
                 appendMessage('system', `Error: ${error.message}`);
@@ -570,6 +1203,8 @@
                     alert("Session expired. Please login again.");
                     logout();
                 }
+            } finally {
+                sendButton.disabled = false;
             }
         }
 
@@ -597,7 +1232,7 @@
         }
 
         async function listChatHistory() {
-            if (!currentUserId) return;
+            if (!currentUserId || !currentToken) return; // Added currentToken check
             
             try {
                 const response = await fetch(`http://localhost:5000/api/list_chat_sessions/${currentUserId}`, {
@@ -615,24 +1250,36 @@
                 historyList.innerHTML = '';
 
                 if (sessions.length === 0) {
-                    historyList.innerHTML = '<p>No chat sessions found</p>';
+                    historyList.innerHTML = '<div class="history-item" style="color: var(--text-color-sidebar); font-style: italic;">No chat history</div>';
+                    // Ensure welcome screen is shown if no history and no current chat messages
+                    const messageElements = chatbox.querySelectorAll('.message, .user-message, .assistant-message');
+                    if (document.getElementById('welcome-screen') && messageElements.length === 0) {
+                        document.getElementById('welcome-screen').style.display = 'flex';
+                    }
                     return;
                 }
 
                 sessions.forEach(session => {
                     const sessionDiv = document.createElement('div');
-                    sessionDiv.className = 'session-item';
+                    sessionDiv.className = `history-item ${session.session_id === currentSessionId ? 'active' : ''}`;
                     
+                    // Format date
+                    const date = new Date(session.last_updated);
+                    const formattedDate = date.toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric' }) + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    
+                    const sessionName = session.session_name || (session.first_message_summary ? (session.first_message_summary.length > 25 ? session.first_message_summary.substring(0,22) + "..." : session.first_message_summary) : 'New Chat');
+
                     sessionDiv.innerHTML = `
-                        <div class="session-header">
-                            <span class="session-name">${session.session_name || 'Unnamed Session'}</span>
-                            <span class="session-time">${session.last_updated}</span>
-                        </div>
-                        <div class="session-actions">
-                            <button onclick="loadChatHistory('${session.session_id}')">Load</button>
-                            <button onclick="deleteSession('${session.session_id}')">Delete</button>
-                        </div>
+                        <div>${sessionName}</div>
+                        <div style="font-size: 12px; color: ${session.session_id === currentSessionId ? 'var(--button-text-color)' : 'var(--text-color-secondary)'}; opacity: 0.7;">${formattedDate}</div>
+                        <button class="delete-history-btn" onclick="event.stopPropagation(); deleteSession('${session.session_id}')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
                     `;
+                    
+                    sessionDiv.onclick = () => loadChatHistory(session.session_id);
                     
                     historyList.appendChild(sessionDiv);
                 });
@@ -640,14 +1287,50 @@
             } catch (error) {
                 console.error("Error loading sessions:", error);
                 historyList.innerHTML = `
-                    <p class="error">Failed to load sessions</p>
-                    <p>${error.message}</p>
+                    <div class="history-item" style="color: var(--error-color);">
+                        Failed to load chat history
+                    </div>
                 `;
             }
         }
 
+        async function deleteSession(sessionId) {
+            if (!confirm("Are you sure you want to delete this chat session? This action cannot be undone.")) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(
+                    `http://localhost:5000/api/delete_session/${currentUserId}/${sessionId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${currentToken}`
+                        }
+                    });
+                
+                if (!response.ok) {
+                    throw new Error(`Delete failed: ${response.status}`);
+                }
+                
+                // If we're currently viewing the deleted session, clear the chat
+                if (currentSessionId === sessionId) {
+                    chatbox.innerHTML = '';
+                    currentSessionId = null;
+                    chatTitle.textContent = 'New Chat';
+                    appendMessage('assistant', 'Hello! How can I assist you today?');
+                }
+                
+                // Refresh the history list
+                await listChatHistory();
+                
+            } catch (error) {
+                console.error("Delete error:", error);
+                appendMessage('system', `Failed to delete session: ${error.message}`);
+            }
+        }
+
         async function loadChatHistory(sessionId) {
-            if (!currentUserId) return;
+            if (!currentUserId || !currentToken) return; // Added currentToken check
             
             try {
                 currentSessionId = sessionId;
@@ -673,93 +1356,40 @@
                             appendMessage(msg.role, msg.content);
                         }
                     });
+                    
+                    // Set chat title
+                    if (result.session_name) {
+                        chatTitle.textContent = result.session_name;
+                    } else {
+                        // Find the first user message to use as title
+                        const firstUserMessage = result.messages.find(m => m.role === 'user' && m.content);
+                        if (firstUserMessage) {
+                            chatTitle.textContent = firstUserMessage.content.length > 30 ? 
+                                firstUserMessage.content.substring(0, 30) + '...' : 
+                                firstUserMessage.content;
+                        } else {
+                            chatTitle.textContent = "Chat"; // Default if no user message for title
+                        }
+                    }
                 } else {
-                    appendMessage('system', 'No messages in this session yet');
+                    // No messages in this session, so show the welcome screen.
+                    if (welcomeScreen) {
+                        welcomeScreen.style.display = 'flex';
+                    }
+                    chatTitle.textContent = "New Chat"; // Or session name if available but empty
                 }
+                
+                // Update active session in history list
+                await listChatHistory();
+                
+                // Scroll to bottom
+                chatbox.scrollTop = chatbox.scrollHeight;
             } catch (error) {
                 console.error("Load error:", error);
                 appendMessage('system', `Failed to load chat: ${error.message}`);
             }
         }
 
-        async function deleteSession(sessionId) {
-            if (!confirm("Are you sure you want to delete this session?")) return;
-            
-            try {
-                const response = await fetch(
-                    `http://localhost:5000/api/delete_session/${currentUserId}/${sessionId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Authorization': `Bearer ${currentToken}`
-                        }
-                    });
-                
-                if (!response.ok) {
-                    throw new Error(`Delete failed: ${response.status}`);
-                }
-                
-                // Refresh the list
-                await listChatHistory();
-                chatbox.innerHTML = '';
-                appendMessage('system', 'Session deleted successfully');
-
-                // Check if there are no sessions left
-                if (historyList.innerHTML.includes('No chat sessions found')) {
-                    await createNewSession();
-                }
-                
-            } catch (error) {
-                console.error("Delete error:", error);
-                appendMessage('system', `Failed to delete session: ${error.message}`);
-            }
-        }
-
-        async function uploadFile() {
-            if (!currentToken) {
-                alert("Please login first");
-                return;
-            }
-            
-            const file = fileInput.files[0];
-            if (!file) {
-                statusText.textContent = 'No file selected';
-                return;
-            }
-            statusText.textContent = 'Uploading file...';
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const response = await fetch('http://localhost:5000/api/upload_file', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${currentToken}`
-                    },
-                    body: formData
-                });
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Upload failed: ${response.status} - ${errorText}`);
-                }
-                
-                const data = await response.json();
-                statusText.textContent = data.message || 'File processed successfully!';
-                
-                // Clear the file input
-                fileInput.value = '';
-                
-                // Refresh the uploaded files list
-                await listUploadedFileHistory();
-                
-            } catch (error) {
-                statusText.textContent = `File upload failed: ${error.message}`;
-                console.error('Upload error:', error);
-            }
-        }
-
     </script>
 </body>
 </html>
-
-
