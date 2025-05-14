@@ -28,9 +28,9 @@ class StoreData:
     def process_data(self,documents,split):
         """Process files and store the index in Redis."""
         if self.redis_client.ping():
-            print("Redis server is up and running!")
+            print("✅ Redis server is up and running!")
         else:
-            print("Failed to connect to Redis.")
+            print("❌ Failed to connect to Redis.")
         
         texts=None
         # Split text into chunks
@@ -61,9 +61,7 @@ class StoreData:
                 redis_url=self.url,
                 index_name=self.index_name
             )
-        
-        print("success")
-        self.retriever = vstore.as_retriever(search_kwargs={"k": 7})
+        self.retriever = vstore.as_retriever(search_kwargs={"k": 4})
     def load_retriever(self):
         return self.retriever
     def store_mysql(self):

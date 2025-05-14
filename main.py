@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, UploadFile, File, HTTPException, Form
+from fastapi import FastAPI, Request, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
@@ -7,18 +7,18 @@ import json
 import logging
 import threading
 import redis
-from datetime import datetime, timedelta
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from auth_service import AuthService, SECRET_KEY, ALGORITHM
-from fastapi import Depends, HTTPException
-from pydantic import BaseModel
+from datetime import datetime
 
 from file_processor import FileProcessor
 from query_engine import QueryEngine
 from chat_history_mysql import ChatHistoryMySQL
 from store_data import StoreData
-import jwt
+from mysql_listener import MySQLChangeListener
 
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from auth_service import AuthService, SECRET_KEY, ALGORITHM
+from fastapi import Depends, HTTPException
+from pydantic import BaseModel
 # Define a model for the request body
 class SaveMessageRequest(BaseModel):
     user_id: str
@@ -288,6 +288,10 @@ async def create_new_session(user_id: str, request: Request):
     
 if __name__ == "__main__":
     import uvicorn
+
+    mysql_listener = MySQLChangeListener()
+    listener_thread = threading.Thread(target=mysql_listener.monitor_changes, daemon=True)
+    listener_thread.start()
     uvicorn.run(
         app,
         host=os.getenv('HOST', '0.0.0.0'),

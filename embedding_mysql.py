@@ -1,16 +1,12 @@
 import mysql.connector
 from langchain.schema import Document  # or use your own Document class
-# Connect to MySQL
-# class mysql_connection:
-#     def __init__(self):
-#         pass
 def embedding_mysql():
     conn = mysql.connector.connect(
         host="127.0.0.1",
         port=3306,
         user="root",
-        password="12345678",
-        database="movie"
+        password="16052004",
+        database="movies"
     )
     cursor = conn.cursor()
     # Query
@@ -21,8 +17,11 @@ def embedding_mysql():
     # Convert each row into a Document
     documents = []
     for row in rows:
-        metadata = dict(zip(columns, row))
-        content = "\n".join(f"{col}: {val}" for col, val in metadata.items())
+        contents = dict(zip(columns, row))
+        # Add movies_database as the id
+        content = "\n".join(f"{col}: {val}" for col, val in contents.items())
+        content = "{" + content + "}"
+        metadata = {'source': 'movies_database'}
         doc = Document(page_content=content, metadata=metadata)
         documents.append(doc)
     # Cleanup
