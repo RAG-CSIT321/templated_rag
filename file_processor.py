@@ -57,7 +57,7 @@ class FileProcessor:
                 documentss = loader.load()
                 split =False
                 print("File process succeed")
-            elif file_type == "doc":
+            elif file_type == "docx":
                 loader = Docx2txtLoader(file_path=file_path)
                 documentss = loader.load()
             elif file_type == 'pdf':  # PDF files

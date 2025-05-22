@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, UploadFile, File, HTTPException, Depends, 
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 import os
 import json
 import logging
@@ -36,6 +37,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # CORS setup
 app.add_middleware(

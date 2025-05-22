@@ -3,775 +3,252 @@
 <head>
     <link rel="icon" href="data:,">
     <title>AI Assistant</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
     <style>
-        :root {
-            --primary-color: #0D4D40; /* Dark green from image */
-            --primary-hover: #0F5A4B; /* Slightly lighter dark green */
-            --sidebar-bg: #0D4D40;    /* Dark green sidebar */
-            --chat-bg: #FFFFFF;       /* White for main chat area */
-            --message-bg-user: #146d0e; /* Dark green for user messages */
-            --message-bg-assistant: #eef1f4; /* Light gray for assistant messages */
-            --text-color: #333333;    /* Dark Gray for text on light backgrounds */
-            --text-color-sidebar: #e0e0e0; /* Light Gray/White for text on dark sidebar */
-            --text-color-secondary: #777777; /* Medium Gray for secondary text */
-            --border-color: #e0e0e0;  /* Light Gray for borders */
-            --input-bg: #C6E1C6;      /* Light green for input field */
-            --button-text-color: #FFFFFF; /* White for text on primary buttons */
-            --error-color: #ff6b6b;   /* Red for errors */
-
-            /* Welcome Screen Specific Colors */
-            --welcome-title-color: #F39C12; /* Orange for "Hello!" */
-            --welcome-subtitle-color: #B38054; /* Tan/brown for subtitle */
-            --welcome-prompt-bg: #0D4D40;    /* Dark green for suggestion boxes */
-            --welcome-prompt-text-color: #FFFFFF; /* White text in suggestion boxes */
-            --welcome-prompt-hover-bg: #0F5A4B; /* Slightly lighter on hover */
-            
-            /* New Chat Button */
-            --new-chat-bg: #F9B93F; /* Yellow button */
-            --new-chat-text: #0D4D40; /* Dark green text */
-            --new-chat-hover: #F7A928; /* Darker yellow on hover */
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: var(--text-color);
-            background-color: var(--chat-bg);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* Sidebar styles */
-        .sidebar {
-            width: 180px;
-            background-color: var(--sidebar-bg);
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            transition: transform 0.3s ease;
-            z-index: 10;
-            border-right: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .sidebar-header {
-            padding: 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .new-chat-btn {
-            width: 100%;
-            padding: 10px 15px;
-            background-color: var(--new-chat-bg);
-            color: var(--new-chat-text);
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            transition: background-color 0.2s;
-        }
-
-        .new-chat-btn:hover {
-            background-color: var(--new-chat-hover);
-        }
-        
-        .sidebar-section-header {
-            padding: 12px 15px 6px;
-            font-size: 12px;
-            color: #B8B9BA;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .history-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0 8px;
-        }
-        
-        .history-list::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .history-list::-webkit-scrollbar-thumb {
-            background-color: rgba(255,255,255,0.2);
-            border-radius: 3px;
-        }
-
-        .history-item {
-            padding: 8px 12px;
-            margin: 2px 0;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: var(--text-color-sidebar);
-            transition: background-color 0.2s, color 0.2s;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .history-item svg {
-            flex-shrink: 0;
-            color: #909090;
-        }
-
-        .history-item span {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .history-item:hover {
-            background-color: rgba(255,255,255,0.1);
-        }
-
-        .history-item.active {
-            background-color: rgba(255,255,255,0.2);
-        }
-        
-        .sidebar-footer {
-            padding: 0;
-            margin-top: auto;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .sidebar-footer-item {
-            display: flex;
-            align-items: center;
-            padding: 14px 16px;
-            color: var(--text-color-sidebar);
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.2s;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        
-        .sidebar-footer-item .footer-icon {
-            width: 20px;
-            height: 20px;
-            margin-right: 12px;
-        }
-        
-        .sidebar-footer-item:hover {
-            background-color: rgba(255,255,255,0.1);
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .user-info:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background-color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--button-text-color);
-            font-weight: bold;
-        }
-
-        .user-name {
-            font-size: 14px;
-            flex: 1;
-            color: var(--text-color-sidebar); /* Added for sidebar text */
-        }
-
-        /* Main chat area */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            position: relative;
-            background-color: white;
-        }
-
-        .chat-header {
-            padding: 12px 20px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background-color: var(--sidebar-bg);
-            color: white;
-            min-height: 50px;
-        }
-
-        .chat-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: white;
-            margin: 0;
-        }
-
-        .sidebar-toggle {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            padding: 5px;
-        }
-        
-        .sidebar-toggle svg {
-            width: 24px;
-            height: 24px;
-        }
-
-        .chat-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            scroll-behavior: smooth;
-            background-color: white;
-        }
-        
-        .chat-container::-webkit-scrollbar {
-            width: 8px;
-        }
-        
-        .chat-container::-webkit-scrollbar-thumb {
-            background-color: #bdc3c7;
-            border-radius: 4px;
-        }
-
-        .message {
-            padding: 0;
-            max-width: 70%;
-            margin: 0 0 10px;
-            display: flex;
-            align-items: flex-start;
-        }
-        
-        .message.user-message {
-            margin-left: auto;
-            justify-content: flex-end;
-        }
-        
-        .message.assistant-message {
-            margin-right: auto;
-        }
-
-        .message-content {
-            padding: 10px 15px;
-            border-radius: 18px;
-            line-height: 1.5;
-            word-wrap: break-word;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-        
-        .user-message .message-content {
-            background-color: var(--message-bg-user);
-            color: white;
-            border-bottom-right-radius: 5px;
-        }
-        
-        .assistant-message .message-content {
-            background-color: var(--message-bg-assistant);
-            color: #2c3e50;
-            border-bottom-left-radius: 5px;
-        }
-
-        .message-text {
-            line-height: 1.5;
-            white-space: pre-wrap;
-        }
-
-        .message-text p:last-child {
-            margin-bottom: 0;
-        }
-
-        .message-text code {
-            background-color: rgba(0, 0, 0, 0.05);
-            padding: 2px 5px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 0.9em;
-        }
-
-        .message-text pre {
-            background-color: rgba(0, 0, 0, 0.07);
-            padding: 10px;
-            border-radius: 6px;
-            overflow-x: auto;
-            margin: 8px 0;
-            font-family: monospace;
-            font-size: 0.9em;
-        }
-
-        /* Input area */
-        .input-container {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            background: white;
-            position: relative;
-        }
-
-        .input-box {
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            background-color: var(--input-bg);
-            border: none;
-            border-radius: 22px;
-            padding: 0 12px;
-        }
-
-        .input-field {
-            flex-grow: 1;
-            padding: 12px 10px;
-            background-color: transparent;
-            border: none;
-            border-radius: 20px;
-            color: var(--primary-color);
-            font-size: 15px;
-            resize: none;
-            min-height: 24px;
-            max-height: 100px;
-            outline: none;
-        }
-
-        .input-field::placeholder {
-            color: rgba(13, 77, 64, 0.6);
-        }
-
-        .input-field:focus {
-            outline: none;
-        }
-
-        .send-button {
-            margin-left: 6px;
-            background-color: transparent;
-            color: var(--primary-color);
-            border: none;
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background-color 0.2s;
-        }
-
-        .send-button:hover {
-            background-color: rgba(0,0,0,0.05);
-        }
-
-        .send-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .footer-text {
-            text-align: center;
-            padding: 5px 0 10px 0;
-            font-size: 12px;
-            color: #7f8c8d;
-            background: white;
-        }
-
-        /* Auth modal */
         .auth-modal {
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #f7f7f7;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .auth-logo {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1A3C34 0%, #2A5C54 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
             display: flex;
             align-items: center;
-            justify-content: center;
-            z-index: 100;
+            gap: 8px;
+        }
+
+        .auth-logo svg {
+            width: 28px;
+            height: 28px;
+            stroke: #1A3C34;
         }
 
         .auth-container {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
             width: 100%;
             max-width: 360px;
+            position: relative;
             margin: auto;
-            padding: 40px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            text-align: center;
+            box-shadow: 0 4px 20px rgba(26, 60, 52, 0.12);
+            border: 1px solid #1A3C34;
         }
 
         .auth-header {
-            margin-bottom: 30px;
+            text-align: center;
+            margin-bottom: 20px;
         }
 
         .auth-title {
             font-size: 24px;
-            font-weight: 600;
-            color: #333;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1A3C34 0%, #2A5C54 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
         }
 
         .auth-form {
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            width: 100%;
+            gap: 15px;
         }
-        
+
         .auth-input-group {
-            margin-bottom: 20px;
-            width: 100%;
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
-        
+
         .auth-input-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #555;
-            font-size: 14px;
-            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #1A3C34 0%, #2A5C54 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .auth-input {
-            width: 100%;
             padding: 10px 12px;
-            background-color: #FFF9E1;
-            border: 1px solid #FCEABB;
-            border-radius: 6px;
-            color: #333;
-            font-size: 16px;
+            border: 1px solid #1A3C34;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            background-color: #f8faf9;
         }
 
         .auth-input:focus {
-            border-color: #FBC02D;
+            border-color: #1A3C34;
+            background-color: white;
+            box-shadow: 0 0 0 2px rgba(26, 60, 52, 0.15);
             outline: none;
-            box-shadow: 0 0 0 2px rgba(251, 192, 45, 0.2);
         }
 
-        /* Style for select dropdown */
-        select.auth-input {
-            appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-            padding-right: 30px;
+        .auth-input::placeholder {
+            color: #9E9E9E;
         }
 
         .auth-button {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--primary-color);
+            background: linear-gradient(135deg, #1A3C34 0%, #2A5C54 100%);
             color: white;
             border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 600;
+            padding: 12px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background-color 0.2s;
-            margin-top: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .auth-button:hover {
-            background-color: var(--primary-hover);
+            background: linear-gradient(135deg, #13332A 0%, #1A3C34 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(26, 60, 52, 0.2);
         }
 
-        .auth-switch {
-            text-align: center;
-            margin-top: 25px;
-            font-size: 14px;
-            color: #555;
-        }
-
-        .auth-switch-button {
-            color: var(--primary-color);
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            text-decoration: none;
+        .auth-button:active {
+            transform: translateY(0);
         }
 
         .auth-error {
-            color: var(--error-color);
-            font-size: 14px;
+            color: #D32F2F;
+            font-size: 13px;
+            margin-top: 4px;
+            padding: 8px 12px;
+            background-color: #fff5f5;
+            border-radius: 6px;
+            font-weight: 500;
+            border: 1px solid #ffebee;
         }
 
-        /* Loading animation */
-        .loading-dots {
-            display: inline-block;
-        }
-        .loading-dots::after {
-            content: '.';
-            animation: loading 1.5s infinite;
-            display: inline-block;
-            width: 1em;
-        }
-        @keyframes loading {
-            0% { content: '.'; }
-            33% { content: '..'; }
-            66% { content: '...'; }
-        }
-
-        /* Mobile responsiveness */
-        @media (max-width: 768px) {
-            .sidebar {
-                position: absolute;
-                transform: translateX(-100%);
-            }
-            
-            .sidebar.visible {
-                transform: translateX(0);
-            }
-            
-            .sidebar-toggle {
-                display: block;
-            }
-            
-            .message {
-                gap: 12px;
-            }
-            
-            .input-container {
-                padding: 12px;
-            }
-        }
-
-        /* Markdown-like formatting */
-        .message-text strong {
-            font-weight: bold;
-        }
-        
-        .message-text em {
-            font-style: italic;
-        }
-        
-        .message-text ul, 
-        .message-text ol {
-            margin-left: 20px;
-            margin-bottom: 12px;
-            color: var(--text-color); /* Ensure list text color */
-        }
-
-        /* Welcome Screen Styles */
-        #welcome-screen {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            justify-content: flex-start;
-            padding: 40px;
-            overflow-y: auto;
-        }
-
-        .welcome-title {
-            font-size: 48px;
-            font-weight: 600;
-            color: var(--welcome-title-color);
-            margin-bottom: 5px;
-            line-height: 1.2;
-        }
-
-        .welcome-subtitle {
-            font-size: 36px;
-            color: var(--welcome-subtitle-color);
-            margin-bottom: 40px;
-            max-width: 600px;
-            line-height: 1.2;
-        }
-
-        .welcome-prompts {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-            width: 100%;
-            max-width: 800px;
+        .auth-switch {
             margin-top: 20px;
+            text-align: center;
+            font-size: 13px;
+            background: linear-gradient(135deg, #1A3C34 0%, #2A5C54 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            padding-top: 20px;
+            border-top: 1px solid #1A3C34;
         }
 
-        .welcome-prompt-box {
-            background-color: var(--welcome-prompt-bg);
-            color: var(--welcome-prompt-text-color);
-            padding: 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 15px;
-            transition: background-color 0.2s;
-            text-align: left;
-            min-height: 80px;
-            display: flex;
-            align-items: center;
-        }
-
-        .welcome-prompt-box:hover {
-            background-color: var(--welcome-prompt-hover-bg);
-        }
-
-        /* Add these new styles for delete button */
-        .delete-history-btn {
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
+        .auth-switch-button {
             background: none;
             border: none;
-            color: var(--text-color-sidebar); /* Use sidebar text color for icon */
+            background: linear-gradient(135deg, #1A3C34 0%, #2A5C54 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             cursor: pointer;
-            opacity: 0;
-            transition: opacity 0.2s;
+            font-weight: 600;
+            padding: 0;
+            margin-left: 5px;
+            transition: all 0.2s ease;
         }
 
-        .history-item:hover .delete-history-btn {
-            opacity: 1;
+        .auth-switch-button:hover {
+            background: linear-gradient(135deg, #13332A 0%, #1A3C34 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+            opacity: 0.8;
         }
 
-        .delete-history-btn:hover {
-            color: var(--error-color);
+        /* Custom select styling */
+        .auth-input[type="select"] {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231A3C34' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 14px;
+            padding-right: 35px;
         }
 
-        .user-profile-icon {
-            width: 32px;
-            height: 32px;
-            background-color: #F9B93F; /* Yellow button color */
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #0D4D40; /* Dark green color */
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .auth-container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            #signup-form .auth-form {
+                grid-template-columns: 1fr;
+            }
         }
 
-        /* User profile dropdown menu */
-        .user-dropdown {
-            position: absolute;
-            top: 55px;
-            right: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            width: 180px;
-            z-index: 100;
-            overflow: hidden;
-            display: none;
-        }
-        
-        .user-dropdown.visible {
-            display: block;
-        }
-        
-        .user-dropdown-item {
-            padding: 12px 16px;
-            color: #333;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            transition: background-color 0.2s;
-        }
-        
-        .user-dropdown-item:hover {
-            background-color: #f1f1f1;
-        }
-        
-        .user-dropdown-item svg {
-            width: 18px;
-            height: 18px;
-            margin-right: 10px;
+        /* Signup form specific styles */
+        #signup-form .auth-container {
+            max-width: 420px;
         }
 
+        #signup-form .auth-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        #signup-form .auth-input-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        #signup-form .auth-button {
+            grid-column: 1 / -1;
+            margin-top: 5px;
+        }
+
+        #signup-form .auth-error {
+            grid-column: 1 / -1;
+        }
+
+        #signup-form .auth-switch {
+            grid-column: 1 / -1;
+            margin-top: 15px;
+            padding-top: 15px;
+        }
     </style>
 </head>
 <body>
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path>
+                </svg>
+            </button>
             <button class="new-chat-btn" onclick="createNewSession()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 4V20M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
-                New chat
+                <span>New chat</span>
             </button>
         </div>
         <div class="sidebar-section-header">Recent</div>
         <div class="history-list" id="history-list">
-            <!-- Example items that will be replaced dynamically -->
-            <div class="history-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                    <path d="M22 4L12 14.01l-3-3"/>
-                </svg>
-                <span>This is a sample chat...</span>
-            </div>
-            <div class="history-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                    <path d="M22 4L12 14.01l-3-3"/>
-                </svg>
-                <span>This is a sample chat...</span>
-            </div>
-            <div class="history-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                    <path d="M22 4L12 14.01l-3-3"/>
-                </svg>
-                <span>This is a sample chat...</span>
-            </div>
-            <div class="history-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                    <path d="M22 4L12 14.01l-3-3"/>
-                </svg>
-                <span>This is a sample chat...</span>
-            </div>
-            <div class="history-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                    <path d="M22 4L12 14.01l-3-3"/>
-                </svg>
-                <span>This is a sample chat...</span>
-            </div>
-            <div class="history-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                    <path d="M22 4L12 14.01l-3-3"/>
-                </svg>
-                <span>This is a sample chat...</span>
-            </div>
-            <div class="history-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                    <path d="M22 4L12 14.01l-3-3"/>
-                </svg>
-                <span>This is a sample chat...</span>
-            </div>
-            <div class="history-item">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                    <path d="M22 4L12 14.01l-3-3"/>
-                </svg>
-                <span>This is a sample chat...</span>
-            </div>
+            <!-- History items will be dynamically added here -->
         </div>
         <div class="sidebar-footer">
             <div class="sidebar-footer-item" onclick="showHelp()">
@@ -782,32 +259,27 @@
             </div>
             <div class="sidebar-footer-item" onclick="showActivity()">
                 <svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-.22-13.88c.04-.05.07-.09.12-.12.05-.04.1-.07.15-.09.3-.14.62-.21.95-.21s.65.07.95.21c.05.02.1.05.15.09.05.03.08.07.12.12.16.18.27.39.33.61.06.22.09.45.09.68s-.03.46-.09.68c-.06.22-.17.43-.33.61l-3.23 3.23c-.1.1-.15.21-.15.32v.54h1.5v-.55c0-.04.01-.08.02-.11.02-.04.04-.07.06-.09l3.23-3.23c.24-.24.43-.52.56-.82.13-.3.2-.63.2-.96s-.07-.66-.2-.96c-.13-.3-.32-.58-.56-.82-.24-.24-.52-.43-.82-.56-.3-.13-.63-.2-.96-.2s-.66.07-.96.2c-.3.13-.58.32-.82.56-.24.24-.43.52-.56.82-.13.3-.2.63-.2.96s.07.66.2.96c.13.3.32.58.56.82L12 12.01l-1.78-1.78c-.16-.18-.27-.39-.33-.61-.06-.22-.09-.45-.09-.68s.03-.46.09-.68c.05-.23.17-.44.32-.62zM11 15h2v2h-2z"></path>
+                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"></path>
+                    <path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"></path>
                 </svg>
                 <span>Activity</span>
             </div>
             <div class="sidebar-footer-item" onclick="showSettings()">
                 <svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-.22-13.88c.04-.05.07-.09.12-.12.05-.04.1-.07.15-.09.3-.14.62-.21.95-.21s.65.07.95.21c.05.02.1.05.15.09.05.03.08.07.12.12.16.18.27.39.33.61.06.22.09.45.09.68s-.03.46-.09.68c-.06.22-.17.43-.33.61l-3.23 3.23c-.1.1-.15.21-.15.32v.54h1.5v-.55c0-.04.01-.08.02-.11.02-.04.04-.07.06-.09l3.23-3.23c.24-.24.43-.52.56-.82.13-.3.2-.63.2-.96s-.07-.66-.2-.96c-.13-.3-.32-.58-.56-.82-.24-.24-.52-.43-.82-.56-.3-.13-.63-.2-.96-.2s-.66.07-.96.2c-.3.13-.58.32-.82.56-.24.24-.43.52-.56.82-.13.3-.2.63-.2.96s.07.66.2.96c.13.3.32.58.56.82L12 12.01l-1.78-1.78c-.16-.18-.27-.39-.33-.61-.06-.22-.09-.45-.09-.68s.03-.46.09-.68c.05-.23.17-.44.32-.62zM11 15h2v2h-2z"></path>
+                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.63-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"></path>
                 </svg>
                 <span>Settings</span>
             </div>
-            
         </div>
     </div>
 
     <!-- Main Content -->
     <div class="main-content">
         <div class="chat-header">
-            <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path>
-                </svg>
-            </button>
             <div class="chat-title" id="chat-title">ChatWithMe</div>
             <div class="user-profile-icon" id="user-profile-icon" onclick="toggleUserDropdown()">
                 <span id="user-initial">U</span>
-            </div>
+        </div>
             
             <div class="user-dropdown" id="user-dropdown">
                 <div class="user-dropdown-item" onclick="logout()">
@@ -819,13 +291,15 @@
             </div>
         </div>
         
+        <div class="header-container"></div>
+        
         <div class="chat-container" id="chatbox">
             <div id="welcome-screen">
                 <h1 class="welcome-title">Hello!</h1>
                 <h2 class="welcome-subtitle">How can I help you today?</h2>
                 <div class="welcome-prompts">
                     <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Which gaming laptop should I buy?')">Which gaming laptop should I buy?</div>
-                    <div class="welcome-prompt-box" onclick="sendWelcomePrompt('What is the latest iphone right now?')">What is the latest iphone right now?</div>
+                    <div class="welcome-prompt-box" onclick="sendWelcomePrompt('What is the latest Iphone right now?')">What is the latest Iphone right now?</div>
                     <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Compare between Dell and Macbook? Which one is better?')">Compare between Dell and Macbook? Which one is better?</div>
                     <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Which laptop is the most suitable for Computer Science?')">Which laptop is the most suitable for Computer Science?</div>
                 </div>
@@ -847,8 +321,25 @@
         <div class="footer-text">ChatWithMe may make mistakes. Please check important information.</div>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div class="delete-modal" id="delete-modal">
+        <div class="delete-modal-content">
+            <p>Delete this chat?</p>
+            <div class="delete-modal-buttons">
+                <button class="delete-cancel-btn" onclick="hideDeleteModal()">Cancel</button>
+                <button class="delete-confirm-btn" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Auth Modal -->
     <div class="auth-modal" id="auth-modal" style="display: flex;">
+        <a href="/" class="auth-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            ChatWithMe
+        </a>
         <div class="auth-container">
             <div class="auth-header">
                 <div class="auth-title" id="auth-title">Login</div>
@@ -882,11 +373,11 @@
                         <label for="signup-email">Email (optional)</label>
                         <input type="email" class="auth-input" id="signup-email">
                     </div>
-                    <div class="auth-input-group">
+                    <div class="auth-input-group full-width">
                         <label for="signup-password">Password</label>
                         <input type="password" class="auth-input" id="signup-password" required>
                     </div>
-                    <div class="auth-input-group">
+                    <div class="auth-input-group full-width">
                         <label for="signup-role">Role</label>
                         <select class="auth-input" id="signup-role">
                             <option value="user">User</option>
@@ -903,7 +394,172 @@
         </div>
     </div>
 
-    
+    <!-- Help Modal -->
+    <div class="help-modal" id="help-modal">
+        <div class="help-modal-content">
+            <div class="help-header">
+                <h2>Help Guide</h2>
+                <button class="help-close-btn" onclick="hideHelp()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="help-sections">
+                <div class="help-section">
+                    <h3>Welcome to ChatWithMe</h3>
+                    <p>Your AI assistant for tech product recommendations and comparisons. Get personalized advice about laptops, smartphones, and other tech devices to make informed decisions.</p>
+                </div>
+
+                <div class="help-section">
+                    <h3>Getting Started</h3>
+                    <ul>
+                        <li><strong>New Chat:</strong> Click the yellow "+" button in the sidebar to start a fresh conversation</li>
+                        <li><strong>Quick Start:</strong> Use the suggested prompts on the welcome screen for common questions</li>
+                        <li><strong>Ask Questions:</strong> Type in the input field at the bottom and press Enter to send</li>
+                        <li><strong>Multi-line:</strong> Use Shift + Enter to add line breaks in your message</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>Managing Your Chats</h3>
+                    <ul>
+                        <li><strong>View History:</strong> All your conversations are saved in the sidebar</li>
+                        <li><strong>Switch Chats:</strong> Click any chat in the sidebar to view that conversation</li>
+                        <li><strong>Delete Chat:</strong> Hover over a chat and click the trash icon to remove it</li>
+                        <li><strong>Sidebar:</strong> Toggle the sidebar using the menu icon for more space</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>Best Practices</h3>
+                    <ul>
+                        <li><strong>Be Specific:</strong> Include details like budget, preferences, and use case in your questions</li>
+                        <li><strong>Follow-up:</strong> Ask follow-up questions to get more detailed information</li>
+                        <li><strong>Compare:</strong> Ask about specific product comparisons for better recommendations</li>
+                        <li><strong>Stay Updated:</strong> Check back regularly as our product database is updated frequently</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <h3>Example Questions</h3>
+                    <div class="example-questions">
+                        <div class="example-question">"What's the best gaming laptop under $1500 with good battery life?"</div>
+                        <div class="example-question">"Compare MacBook Air M2 vs Dell XPS 13 for programming"</div>
+                        <div class="example-question">"Recommend a phone with great camera and battery under $800"</div>
+                        <div class="example-question">"What are the pros and cons of the latest iPhone?"</div>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <h3>Need More Help?</h3>
+                    <p>If you have any questions or feedback, feel free to ask in the chat. We're constantly improving to serve you better!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="settings-modal" id="settings-modal" style="display: none;">
+        <div class="settings-modal-content">
+            <div class="settings-header">
+                <h2>Settings</h2>
+                <button class="settings-close-btn" onclick="hideSettings()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="settings-sections">
+                <div class="settings-section">
+                    <h3>Appearance</h3>
+                    <div class="setting-item">
+                        <label>Message Display</label>
+                        <select id="message-display" onchange="updateSettings('messageDisplay', this.value)">
+                            <option value="modern">Modern (Default)</option>
+                            <option value="compact">Compact</option>
+                            <option value="spacious">Spacious</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Font Size</label>
+                        <select id="font-size" onchange="updateSettings('fontSize', this.value)">
+                            <option value="small">Small</option>
+                            <option value="medium">Medium (Default)</option>
+                            <option value="large">Large</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Chat Behavior</h3>
+                    <div class="setting-item">
+                        <label>Send Messages On</label>
+                        <select id="send-behavior" onchange="updateSettings('sendBehavior', this.value)">
+                            <option value="enter">Enter (Default)</option>
+                            <option value="ctrl-enter">Ctrl + Enter</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-with-description">
+                            <label class="switch">
+                                <input type="checkbox" id="auto-scroll" onchange="updateSettings('autoScroll', this.checked)">
+                                <span class="slider round"></span>
+                            </label>
+                            <div class="setting-text">
+                                <span>Auto-scroll to bottom</span>
+                                <span class="setting-description">Automatically scroll to new messages</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Notifications</h3>
+                    <div class="setting-item">
+                        <div class="setting-with-description">
+                            <label class="switch">
+                                <input type="checkbox" id="sound-enabled" onchange="updateSettings('soundEnabled', this.checked)">
+                                <span class="slider round"></span>
+                            </label>
+                            <div class="setting-text">
+                                <span>Sound Effects</span>
+                                <span class="setting-description">Play sound when messages are sent/received</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-with-description">
+                            <label class="switch">
+                                <input type="checkbox" id="desktop-notifications" onchange="updateSettings('desktopNotifications', this.checked)">
+                                <span class="slider round"></span>
+                            </label>
+                            <div class="setting-text">
+                                <span>Desktop Notifications</span>
+                                <span class="setting-description">Show notifications when chat is in background</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Privacy</h3>
+                    <div class="setting-item">
+                        <div class="setting-with-description">
+                            <label class="switch">
+                                <input type="checkbox" id="save-history" onchange="updateSettings('saveHistory', this.checked)" checked>
+                                <span class="slider round"></span>
+                            </label>
+                            <div class="setting-text">
+                                <span>Save Chat History</span>
+                                <span class="setting-description">Keep record of your conversations</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Authentication state
@@ -912,8 +568,7 @@
         let currentUsername = null;
         let currentSessionId = null;
         let isSidebarVisible = true;
-
-        // Global flag to prevent multiple redirections
+        let pendingDeleteSessionId = null;
         let authCheckInProgress = false;
 
         // DOM elements
@@ -967,7 +622,7 @@
                         <h2 class="welcome-subtitle">How can I help you today?</h2>
                         <div class="welcome-prompts">
                             <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Which gaming laptop should I buy?')">Which gaming laptop should I buy?</div>
-                            <div class="welcome-prompt-box" onclick="sendWelcomePrompt('What is the latest iphone right now?')">What is the latest iphone right now?</div>
+                            <div class="welcome-prompt-box" onclick="sendWelcomePrompt('What is the latest Iphone right now?')">What is the latest Iphone right now?</div>
                             <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Compare between Dell and Macbook? Which one is better?')">Compare between Dell and Macbook? Which one is better?</div>
                             <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Which laptop is the most suitable for Computer Science?')">Which laptop is the most suitable for Computer Science?</div>
                         </div>
@@ -984,6 +639,12 @@
             if (storedToken) {
                 checkAuthStatus();
             }
+            
+            // Restore sidebar state
+            const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (sidebarCollapsed) {
+                document.getElementById('sidebar').classList.add('collapsed');
+            }
         });
 
         function checkScreenSize() {
@@ -997,11 +658,12 @@
         }
 
         function toggleSidebar() {
-            isSidebarVisible = !isSidebarVisible;
-            sidebar.classList.toggle('visible', isSidebarVisible);
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+            
+            // Save the state to localStorage
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         }
-
-
 
         // Auth Functions
         function showAuthModal() {
@@ -1162,17 +824,19 @@
                 }
                 
                 const data = await response.json();
+                console.log("Login response data:", data);
                 currentToken = data.access_token;
                 currentUserId = data.user_id;
                 currentUsername = username;
                 
+                // Store token in both formats for compatibility
                 localStorage.setItem('auth_token', currentToken);
+                localStorage.setItem('accessToken', currentToken);
                 
                 // Check if user is a client and redirect to client dashboard
                 if (data.role === 'client') {
                     console.log("User is a client, redirecting to client dashboard after login");
                     localStorage.setItem('userRole', data.role);
-                    localStorage.setItem('accessToken', currentToken); // Also set the token in the format client dashboard expects
                     
                     // Use replace to prevent back button issues
                     window.location.replace('/client');
@@ -1532,7 +1196,7 @@
         }
 
         async function listChatHistory() {
-            if (!currentUserId || !currentToken) return; // Added currentToken check
+            if (!currentUserId || !currentToken) return;
             
             try {
                 const response = await fetch(`http://localhost:5000/api/list_chat_sessions/${currentUserId}`, {
@@ -1551,7 +1215,6 @@
 
                 if (sessions.length === 0) {
                     historyList.innerHTML = '<div class="history-item" style="color: var(--text-color-sidebar); font-style: italic;">No chat history</div>';
-                    // Ensure welcome screen is shown if no history and no current chat selected
                     if (!currentSessionId) {
                         showWelcomeScreen();
                     }
@@ -1565,24 +1228,23 @@
                     const sessionName = session.session_name || (session.first_message_summary ? (session.first_message_summary.length > 25 ? session.first_message_summary.substring(0,22) + "..." : session.first_message_summary) : 'New Chat');
 
                     sessionDiv.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#AAAAAA" stroke-width="2">
-                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
-                            <path d="M22 4L12 14.01l-3-3"/>
-                        </svg>
-                        <span>${sessionName}</span>
+                        <div class="history-item-content" onclick="loadChatHistory('${session.session_id}')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#AAAAAA" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                                <path d="M22 4L12 14.01l-3-3"/>
+                            </svg>
+                            <span>${sessionName}</span>
+                        </div>
+                        <button class="delete-chat-btn" onclick="showDeleteModal('${session.session_id}', event)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff4d4d">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                        </button>
                     `;
-                    
-                    sessionDiv.onclick = () => loadChatHistory(session.session_id);
                     
                     historyList.appendChild(sessionDiv);
                 });
                 
-                // If no session is selected but we have sessions, we could optionally
-                // auto-select the first one or just show welcome screen
-                if (!currentSessionId && sessions.length > 0) {
-                    showWelcomeScreen();
-                }
-
             } catch (error) {
                 console.error("Error loading sessions:", error);
                 historyList.innerHTML = `
@@ -1591,52 +1253,63 @@
                     </div>
                 `;
                 
-                // Show welcome screen if we can't load sessions
                 if (!currentSessionId) {
                     showWelcomeScreen();
                 }
             }
         }
 
-        async function deleteSession(sessionId) {
-            if (!confirm("Are you sure you want to delete this chat session? This action cannot be undone.")) {
-                return;
+        function showDeleteModal(sessionId, event) {
+            if (event) {
+                event.stopPropagation(); // Prevent triggering chat load
             }
-            
-            try {
-                const response = await fetch(
-                    `http://localhost:5000/api/delete_session/${currentUserId}/${sessionId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Authorization': `Bearer ${currentToken}`
-                        }
-                    });
-                
-                if (!response.ok) {
-                    throw new Error(`Delete failed: ${response.status}`);
-                }
-                
-                // If we're currently viewing the deleted session, clear the chat
-                if (currentSessionId === sessionId) {
-                    chatbox.innerHTML = '';
-                    currentSessionId = null;
-                    chatTitle.textContent = 'ChatWithMe';
+            pendingDeleteSessionId = sessionId;
+            document.getElementById('delete-modal').style.display = 'flex';
+        }
+
+        function hideDeleteModal() {
+            document.getElementById('delete-modal').style.display = 'none';
+            pendingDeleteSessionId = null;
+        }
+
+        async function confirmDelete() {
+            if (pendingDeleteSessionId) {
+                try {
+                    const response = await fetch(
+                        `http://localhost:5000/api/delete_session/${currentUserId}/${pendingDeleteSessionId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `Bearer ${currentToken}`
+                            }
+                        });
                     
-                    // Show welcome screen after deleting current session
-                    showWelcomeScreen();
+                    if (!response.ok) {
+                        throw new Error(`Delete failed: ${response.status}`);
+                    }
+                    
+                    // If we're currently viewing the deleted session, clear the chat
+                    if (currentSessionId === pendingDeleteSessionId) {
+                        chatbox.innerHTML = '';
+                        currentSessionId = null;
+                        chatTitle.textContent = 'ChatWithMe';
+                        
+                        // Show welcome screen after deleting current session
+                        showWelcomeScreen();
+                    }
+                    
+                    // Refresh the history list
+                    await listChatHistory();
+                    
+                } catch (error) {
+                    console.error("Delete error:", error);
+                    appendMessage('system', `Failed to delete session: ${error.message}`);
                 }
-                
-                // Refresh the history list
-                await listChatHistory();
-                
-            } catch (error) {
-                console.error("Delete error:", error);
-                appendMessage('system', `Failed to delete session: ${error.message}`);
+                hideDeleteModal();
             }
         }
 
         async function loadChatHistory(sessionId) {
-            if (!currentUserId || !currentToken) return; // Added currentToken check
+            if (!currentUserId || !currentToken) return;
             
             try {
                 // Hide welcome screen when loading a session
@@ -1699,7 +1372,11 @@
 
         // Placeholder functions for sidebar buttons
         function showHelp() {
-            alert('Help functionality will be implemented in future versions');
+            document.getElementById('help-modal').style.display = 'flex';
+        }
+        
+        function hideHelp() {
+            document.getElementById('help-modal').style.display = 'none';
         }
         
         function showActivity() {
@@ -1707,8 +1384,82 @@
         }
 
         function showSettings() {
-            alert('Setting functionality will be implemented in future version')
+            document.getElementById('settings-modal').style.display = 'flex';
         }
+
+        function hideSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        function updateSettings(setting, value) {
+            // Store settings in localStorage
+            localStorage.setItem(setting, value);
+            
+            // Apply settings immediately
+            applySettings(setting, value);
+        }
+
+        function applySettings(setting, value) {
+            switch(setting) {
+                case 'messageDisplay':
+                    document.body.setAttribute('data-message-display', value);
+                    break;
+                case 'fontSize':
+                    document.body.setAttribute('data-font-size', value);
+                    break;
+                case 'sendBehavior':
+                    // Update send message behavior
+                    break;
+                case 'autoScroll':
+                    // Update auto-scroll behavior
+                    break;
+                case 'soundEnabled':
+                    // Update sound settings
+                    break;
+                case 'desktopNotifications':
+                    if (value) {
+                        // Request notification permission
+                        Notification.requestPermission();
+                    }
+                    break;
+                case 'saveHistory':
+                    // Update history saving preference
+                    break;
+            }
+        }
+
+        // Load saved settings on startup
+        function loadSavedSettings() {
+            const settings = [
+                'messageDisplay',
+                'fontSize',
+                'sendBehavior',
+                'autoScroll',
+                'soundEnabled',
+                'desktopNotifications',
+                'saveHistory'
+            ];
+
+            settings.forEach(setting => {
+                const value = localStorage.getItem(setting);
+                if (value !== null) {
+                    // Update UI
+                    const element = document.getElementById(setting.replace(/([A-Z])/g, '-$1').toLowerCase());
+                    if (element) {
+                        if (element.type === 'checkbox') {
+                            element.checked = value === 'true';
+                        } else {
+                            element.value = value;
+                        }
+                        // Apply setting
+                        applySettings(setting, value);
+                    }
+                }
+            });
+        }
+
+        // Call this after DOM is loaded
+        document.addEventListener('DOMContentLoaded', loadSavedSettings);
 
         // Show welcome screen function
         function showWelcomeScreen() {
@@ -1729,7 +1480,7 @@
                         <h2 class="welcome-subtitle">How can I help you today?</h2>
                         <div class="welcome-prompts">
                             <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Which gaming laptop should I buy?')">Which gaming laptop should I buy?</div>
-                            <div class="welcome-prompt-box" onclick="sendWelcomePrompt('What is the latest iphone right now?')">What is the latest iphone right now?</div>
+                            <div class="welcome-prompt-box" onclick="sendWelcomePrompt('What is the latest Iphone right now?')">What is the latest Iphone right now?</div>
                             <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Compare between Dell and Macbook? Which one is better?')">Compare between Dell and Macbook? Which one is better?</div>
                             <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Which laptop is the most suitable for Computer Science?')">Which laptop is the most suitable for Computer Science?</div>
                         </div>

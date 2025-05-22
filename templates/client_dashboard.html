@@ -310,7 +310,7 @@
             <h2>Upload Files</h2>
             <div class="upload-area" id="drop-area">
                 <p>Drag & drop files here or click to browse</p>
-                <p>Supported formats: PDF, TXT, CSV, JPG, PNG</p>
+                <p>Supported formats: PDF, TXT, CSV, JPG, PNG, DOCX</p>
                 <input type="file" id="fileInput" style="display: none;" multiple>
                 <label for="fileInput" class="browse-btn">Browse Files</label>
             </div>
@@ -386,8 +386,10 @@
                 
                 // Check for both token formats for compatibility
                 const token = localStorage.getItem('accessToken') || localStorage.getItem('auth_token');
+                console.log("Found token:", token ? "Yes" : "No");
                 
                 if (!token) {
+                    console.log("No token found, redirecting to login");
                     // No token, redirect to login
                     window.location.replace('/');
                     return;
@@ -400,12 +402,14 @@
                     }
                 })
                 .then(response => {
+                    console.log("Auth check response status:", response.status);
                     if (!response.ok) {
                         throw new Error('Invalid token');
                     }
                     return response.json();
                 })
                 .then(data => {
+                    console.log("Auth check response data:", data);
                     // Auth check complete
                     authCheckInProgress = false;
                     
