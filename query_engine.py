@@ -85,26 +85,27 @@ class QueryEngine:
             return query
 
         # Get the last few messages for context
-        last_messages = chat_history[-3:]  # Get last 3 messages
+        last_messages = chat_history[-5:]  # Get last 3 messages
         context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in last_messages])
         
-        # Create a prompt to enhance the query
+        # Create a simpler prompt to enhance the query
         enhancement_prompt = f"""
-        Based on the following conversation context and the current question, refine this prompt that would help to retrieve relevant information.
-        If the current question is a follow-up question, include relevant details from the context.
+        Based on the chat history and current question, create a clear and focused search query.
+        Keep the query structured and relevant to the original question.
+        Do not add speculative options or make assumptions.
+        if the question is already clear and concise,just return the question.
 
-        No need to refine greeting messages.
-
-        Conversation context:
+        Chat history:
         {context}
 
         Current question: {query}
 
-        Enhanced query:
-        """
+        Enhanced query:"""
         
         enhanced_query = self.llm.invoke(enhancement_prompt)
         result = enhanced_query.content if hasattr(enhanced_query, 'content') else str(enhanced_query)
+        # Clean up the response to remove any extra formatting or explanations
+        result = result.strip().split('\n')[0]  # Take only the first line
         print(f"Enhanced query: {result}")
         return result
 

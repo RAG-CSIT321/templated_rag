@@ -38,8 +38,8 @@ class AuthService:
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
     
-    def register_user(self, username: str, password: str, email: Optional[str] = None):
-        """Register a new user"""
+    def register_user(self, username: str, password: str, email: Optional[str] = None, role: str = "user"):
+        """Register a new user with specified role (client or user)"""
         cursor = self.db.connection.cursor()
         
         # Check if username exists
@@ -70,16 +70,16 @@ class AuthService:
             # Create user in users table
             self.db.create_user_if_not_exists(user_id, username)
             
-            # Create auth record
+            # Create auth record with role
             cursor.execute(
                 """INSERT INTO user_auth 
-                (user_id, username, email, password_hash, created_at) 
-                VALUES (%s, %s, %s, %s, %s)""",
-                (user_id, username, email, password_hash, created_at)
+                (user_id, username, email, password_hash, role, created_at) 
+                VALUES (%s, %s, %s, %s, %s, %s)""",
+                (user_id, username, email, password_hash, role, created_at)
             )
             
             self.db.connection.commit()
-            return {"status": "success", "user_id": user_id}
+            return {"status": "success", "user_id": user_id, "role": role}
         except Exception as e:
             self.db.connection.rollback()
             raise HTTPException(
@@ -94,7 +94,7 @@ class AuthService:
         cursor = self.db.connection.cursor(dictionary=True)
         
         cursor.execute(
-            "SELECT user_id, username, password_hash FROM user_auth WHERE username = %s",
+            "SELECT user_id, username, password_hash, role FROM user_auth WHERE username = %s",
             (username,)
         )
         user = cursor.fetchone()
@@ -115,14 +115,15 @@ class AuthService:
             )
         
         access_token = self.create_access_token(
-            data={"sub": user['username'], "user_id": user['user_id']},
+            data={"sub": user['username'], "user_id": user['user_id'], "role": user['role']},
             expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         )
         
         return {
             "access_token": access_token,
             "token_type": "bearer",
-            "user_id": user['user_id']
+            "user_id": user['user_id'],
+            "role": user['role']
         }
     
     def get_current_user(self, token: str):
@@ -136,12 +137,13 @@ class AuthService:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             username: str = payload.get("sub")
             user_id: str = payload.get("user_id")
+            role: str = payload.get("role")
             if username is None or user_id is None:
                 raise credentials_exception
         except jwt.PyJWTError:
             raise credentials_exception
         
-        return {"username": username, "user_id": user_id}
+        return {"username": username, "user_id": user_id, "role": role}
     
     def check_username_exists(self, username: str) -> bool:
         """Check if a username already exists in the database"""

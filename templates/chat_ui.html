@@ -5,26 +5,31 @@
     <title>AI Assistant</title>
     <style>
         :root {
-            --primary-color: #20C997; /* Bright Green for buttons/accents */
-            --primary-hover: #1BAD82; /* Darker shade of primary */
-            --sidebar-bg: #2A393E;    /* Dark Slate Green/Gray for sidebar */
+            --primary-color: #0D4D40; /* Dark green from image */
+            --primary-hover: #0F5A4B; /* Slightly lighter dark green */
+            --sidebar-bg: #0D4D40;    /* Dark green sidebar */
             --chat-bg: #FFFFFF;       /* White for main chat area */
-            --message-bg-user: #E8F5E9; /* Very Light Green for user messages */
-            --message-bg-assistant: #FFFFFF; /* White for assistant messages */
+            --message-bg-user: #146d0e; /* Dark green for user messages */
+            --message-bg-assistant: #eef1f4; /* Light gray for assistant messages */
             --text-color: #333333;    /* Dark Gray for text on light backgrounds */
-            --text-color-sidebar: #E0E0E0; /* Light Gray/White for text on dark sidebar */
+            --text-color-sidebar: #e0e0e0; /* Light Gray/White for text on dark sidebar */
             --text-color-secondary: #777777; /* Medium Gray for secondary text */
-            --border-color: #E0E0E0;  /* Light Gray for borders */
-            --input-bg: #F7F7F7;      /* Very Light Gray for input fields */
+            --border-color: #e0e0e0;  /* Light Gray for borders */
+            --input-bg: #C6E1C6;      /* Light green for input field */
             --button-text-color: #FFFFFF; /* White for text on primary buttons */
-            --error-color: #D32F2F;   /* Standard Red */
+            --error-color: #ff6b6b;   /* Red for errors */
 
-            /* New Welcome Screen Specific Colors */
+            /* Welcome Screen Specific Colors */
             --welcome-title-color: #F39C12; /* Orange for "Hello!" */
-            --welcome-subtitle-color: #34495E; /* Dark Blue/Gray for "How can I help..." */
-            --welcome-prompt-bg: #4A6A77;    /* Dark Teal/Blue for suggestion boxes */
-            --welcome-prompt-text-color: #FFFFFF; /* White for text in suggestion boxes */
-            --welcome-prompt-hover-bg: #5A7A87; /* Slightly lighter for hover */
+            --welcome-subtitle-color: #B38054; /* Tan/brown for subtitle */
+            --welcome-prompt-bg: #0D4D40;    /* Dark green for suggestion boxes */
+            --welcome-prompt-text-color: #FFFFFF; /* White text in suggestion boxes */
+            --welcome-prompt-hover-bg: #0F5A4B; /* Slightly lighter on hover */
+            
+            /* New Chat Button */
+            --new-chat-bg: #F9B93F; /* Yellow button */
+            --new-chat-text: #0D4D40; /* Dark green text */
+            --new-chat-hover: #F7A928; /* Darker yellow on hover */
         }
 
         * {
@@ -44,76 +49,125 @@
 
         /* Sidebar styles */
         .sidebar {
-            width: 260px;
+            width: 180px;
             background-color: var(--sidebar-bg);
             display: flex;
             flex-direction: column;
             height: 100vh;
             transition: transform 0.3s ease;
             z-index: 10;
+            border-right: 1px solid rgba(255,255,255,0.1);
         }
 
         .sidebar-header {
-            padding: 12px;
-            border-bottom: 1px solid var(--border-color);
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
         .new-chat-btn {
             width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            background-color: var(--primary-color);
-            color: var(--button-text-color);
+            padding: 10px 15px;
+            background-color: var(--new-chat-bg);
+            color: var(--new-chat-text);
             border: none;
-            border-radius: 4px;
+            border-radius: 20px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
             font-size: 14px;
+            font-weight: 600;
+            transition: background-color 0.2s;
         }
 
         .new-chat-btn:hover {
-            background-color: var(--primary-hover);
+            background-color: var(--new-chat-hover);
+        }
+        
+        .sidebar-section-header {
+            padding: 12px 15px 6px;
+            font-size: 12px;
+            color: #B8B9BA;
+            text-transform: uppercase;
+            font-weight: 600;
         }
 
         .history-list {
             flex: 1;
             overflow-y: auto;
-            padding: 8px 0;
+            padding: 0 8px;
+        }
+        
+        .history-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .history-list::-webkit-scrollbar-thumb {
+            background-color: rgba(255,255,255,0.2);
+            border-radius: 3px;
         }
 
         .history-item {
-            padding: 10px 12px;
-            margin: 4px 8px;
+            padding: 8px 12px;
+            margin: 2px 0;
             border-radius: 4px;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-color-sidebar);
+            transition: background-color 0.2s, color 0.2s;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            font-size: 14px;
-            color: var(--text-color-sidebar); /* Added for sidebar text */
-            position: relative; /* For delete button */
-            padding-right: 40px; /* Space for delete button */
+        }
+
+        .history-item svg {
+            flex-shrink: 0;
+            color: #909090;
+        }
+
+        .history-item span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .history-item:hover {
-            background-color: #3A5057; /* Darker hover for dark sidebar */
+            background-color: rgba(255,255,255,0.1);
         }
 
         .history-item.active {
-            background-color: var(--primary-color); /* Active chat uses primary color */
-            color: var(--button-text-color);
+            background-color: rgba(255,255,255,0.2);
         }
-        .history-item.active .delete-history-btn,
-        .history-item.active div[style*="color: var(--text-color-dark)"] {
-            color: var(--button-text-color); /* Make sure nested elements also adapt */
-        }
-
+        
         .sidebar-footer {
-            padding: 12px;
-            border-top: 1px solid var(--border-color);
+            padding: 0;
+            margin-top: auto;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .sidebar-footer-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            color: var(--text-color-sidebar);
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .sidebar-footer-item .footer-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+        }
+        
+        .sidebar-footer-item:hover {
+            background-color: rgba(255,255,255,0.1);
         }
 
         .user-info {
@@ -154,31 +208,38 @@
             flex-direction: column;
             height: 100vh;
             position: relative;
+            background-color: white;
         }
 
         .chat-header {
-            padding: 12px;
+            padding: 12px 20px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background-color: var(--chat-bg); /* Ensure header matches chat bg */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+            background-color: var(--sidebar-bg);
+            color: white;
+            min-height: 50px;
         }
 
         .chat-title {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 600;
-            color: var(--text-color); /* Ensure title uses main text color */
+            color: white;
+            margin: 0;
         }
 
         .sidebar-toggle {
             background: none;
             border: none;
-            color: var(--text-color); /* Ensure toggle uses main text color */
+            color: white;
             cursor: pointer;
-            font-size: 20px;
-            display: none;
+            padding: 5px;
+        }
+        
+        .sidebar-toggle svg {
+            width: 24px;
+            height: 24px;
         }
 
         .chat-container {
@@ -186,54 +247,52 @@
             overflow-y: auto;
             padding: 20px;
             scroll-behavior: smooth;
+            background-color: white;
+        }
+        
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .chat-container::-webkit-scrollbar-thumb {
+            background-color: #bdc3c7;
+            border-radius: 4px;
         }
 
         .message {
-            padding: 10px 0; /* Reduced vertical padding */
-            max-width: 800px;
-            margin: 0 auto;
+            padding: 0;
+            max-width: 70%;
+            margin: 0 0 10px;
             display: flex;
-            gap: 15px; /* Slightly reduced gap */
+            align-items: flex-start;
+        }
+        
+        .message.user-message {
+            margin-left: auto;
+            justify-content: flex-end;
+        }
+        
+        .message.assistant-message {
+            margin-right: auto;
         }
 
         .message-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .message.user-message .message-content {
-            align-items: flex-end;
-        }
-        .message.assistant-message .message-content {
-            align-items: flex-start;
-        }
-
-        .message-role {
-            font-size: 12px;
-            font-weight: bold;
-            margin-bottom: 4px;
-            color: var(--text-color-secondary);
-        }
-
-        .message-bubble {
             padding: 10px 15px;
             border-radius: 18px;
-            max-width: 75%;
             line-height: 1.5;
-            word-wrap: break-word; /* Ensure long words break */
+            word-wrap: break-word;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-
-        .message.user-message .message-bubble {
+        
+        .user-message .message-content {
             background-color: var(--message-bg-user);
-            color: var(--text-color);
+            color: white;
             border-bottom-right-radius: 5px;
         }
-
-        .message.assistant-message .message-bubble {
+        
+        .assistant-message .message-content {
             background-color: var(--message-bg-assistant);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
+            color: #2c3e50;
             border-bottom-left-radius: 5px;
         }
 
@@ -247,80 +306,95 @@
         }
 
         .message-text code {
-            background-color: rgba(0, 0, 0, 0.05); /* Lighter code bg for light theme */
-            padding: 2px 4px;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 2px 5px;
             border-radius: 4px;
             font-family: monospace;
-            color: var(--text-color);
+            font-size: 0.9em;
         }
 
         .message-text pre {
-            background-color: rgba(0, 0, 0, 0.05); /* Lighter pre bg */
-            padding: 12px;
-            border-radius: 4px;
+            background-color: rgba(0, 0, 0, 0.07);
+            padding: 10px;
+            border-radius: 6px;
             overflow-x: auto;
-            margin: 12px 0;
-            color: var(--text-color);
+            margin: 8px 0;
+            font-family: monospace;
+            font-size: 0.9em;
         }
-
 
         /* Input area */
         .input-container {
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-            width: 100%;
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background: white;
+            position: relative;
         }
 
         .input-box {
-            position: relative;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Subtle shadow for input box */
-            border-radius: 8px; /* Rounded input box */
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            background-color: var(--input-bg);
+            border: none;
+            border-radius: 22px;
+            padding: 0 12px;
         }
 
         .input-field {
-            width: 100%;
-            padding: 12px 48px 12px 16px;
-            background-color: var(--input-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px; /* Match input-box rounding */
-            color: var(--text-color);
-            font-size: 16px;
+            flex-grow: 1;
+            padding: 12px 10px;
+            background-color: transparent;
+            border: none;
+            border-radius: 20px;
+            color: var(--primary-color);
+            font-size: 15px;
             resize: none;
-            min-height: 60px;
-            max-height: 200px;
+            min-height: 24px;
+            max-height: 100px;
             outline: none;
         }
 
+        .input-field::placeholder {
+            color: rgba(13, 77, 64, 0.6);
+        }
+
         .input-field:focus {
-            border-color: var(--primary-color);
+            outline: none;
         }
 
         .send-button {
-            position: absolute;
-            right: 12px;
-            bottom: 12px;
-            background-color: var(--primary-color);
-            color: var(--button-text-color);
+            margin-left: 6px;
+            background-color: transparent;
+            color: var(--primary-color);
             border: none;
-            border-radius: 6px; /* Slightly rounded button */
+            border-radius: 50%;
             width: 32px;
             height: 32px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: background-color 0.2s;
         }
 
         .send-button:hover {
-            background-color: var(--primary-hover);
+            background-color: rgba(0,0,0,0.05);
         }
 
         .send-button:disabled {
-            background-color: var(--border-color);
+            opacity: 0.5;
             cursor: not-allowed;
         }
-
+        
+        .footer-text {
+            text-align: center;
+            padding: 5px 0 10px 0;
+            font-size: 12px;
+            color: #7f8c8d;
+            background: white;
+        }
 
         /* Auth modal */
         .auth-modal {
@@ -329,7 +403,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
+            background-color: #f7f7f7;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -337,49 +411,71 @@
         }
 
         .auth-container {
-            background-color: var(--sidebar-bg);
-            border-radius: 8px;
             width: 100%;
-            max-width: 400px;
-            padding: 24px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            max-width: 360px;
+            margin: auto;
+            padding: 40px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
         }
 
         .auth-header {
-            text-align: center;
-            margin-bottom: 24px;
+            margin-bottom: 30px;
         }
 
         .auth-title {
             font-size: 24px;
-            margin-bottom: 8px;
-            color: #E0E0E0;
-        }
-
-        .auth-subtitle {
-            color: white; /* This was from old theme, should be --text-color-sidebar for dark modals */
-            font-size: 14px;
+            font-weight: 600;
+            color: #333;
         }
 
         .auth-form {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 20px;
+            width: 100%;
+        }
+        
+        .auth-input-group {
+            margin-bottom: 20px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .auth-input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+            font-size: 14px;
+            text-align: center;
         }
 
         .auth-input {
             width: 100%;
-            padding: 12px;
-            background-color: var(--input-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            color: var(--text-color);
-            font-size: 14px;
+            padding: 10px 12px;
+            background-color: #FFF9E1;
+            border: 1px solid #FCEABB;
+            border-radius: 6px;
+            color: #333;
+            font-size: 16px;
         }
 
         .auth-input:focus {
-            border-color: var(--primary-color);
+            border-color: #FBC02D;
             outline: none;
+            box-shadow: 0 0 0 2px rgba(251, 192, 45, 0.2);
+        }
+
+        /* Style for select dropdown */
+        select.auth-input {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 30px;
         }
 
         .auth-button {
@@ -388,10 +484,12 @@
             background-color: var(--primary-color);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
         }
 
         .auth-button:hover {
@@ -400,9 +498,9 @@
 
         .auth-switch {
             text-align: center;
-            margin-top: 16px;
+            margin-top: 25px;
             font-size: 14px;
-            color: #E0E0E0;
+            color: #555;
         }
 
         .auth-switch-button {
@@ -411,46 +509,28 @@
             border: none;
             cursor: pointer;
             font-weight: 600;
+            text-decoration: none;
         }
 
         .auth-error {
             color: var(--error-color);
             font-size: 14px;
-            margin-top: 8px;
         }
 
-        /* Loading indicator */
-        .loading-indicator {
-            display: flex;
-            gap: 8px;
-            align-items: center;
+        /* Loading animation */
+        .loading-dots {
+            display: inline-block;
         }
-
-        .loading-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--text-color-dark);
-            border-radius: 50%;
-            animation: pulse 1.5s infinite ease-in-out;
+        .loading-dots::after {
+            content: '.';
+            animation: loading 1.5s infinite;
+            display: inline-block;
+            width: 1em;
         }
-
-        .loading-dot:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .loading-dot:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                transform: scale(0.8);
-                opacity: 0.5;
-            }
-            50% {
-                transform: scale(1.2);
-                opacity: 1;
-            }
+        @keyframes loading {
+            0% { content: '.'; }
+            33% { content: '..'; }
+            66% { content: '...'; }
         }
 
         /* Mobile responsiveness */
@@ -495,47 +575,52 @@
 
         /* Welcome Screen Styles */
         #welcome-screen {
+            flex-grow: 1;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 20px; /* Reduced padding */
-            flex-grow: 1; /* Allow it to take available space */
-            height: 100%;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 40px;
+            overflow-y: auto;
         }
 
         .welcome-title {
-            font-size: 42px;
-            font-weight: bold;
+            font-size: 48px;
+            font-weight: 600;
             color: var(--welcome-title-color);
-            margin-bottom: 12px;
+            margin-bottom: 5px;
+            line-height: 1.2;
         }
 
         .welcome-subtitle {
-            font-size: 20px;
+            font-size: 36px;
             color: var(--welcome-subtitle-color);
-            margin-bottom: 30px;
+            margin-bottom: 40px;
+            max-width: 600px;
+            line-height: 1.2;
         }
 
         .welcome-prompts {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
+            gap: 16px;
             width: 100%;
-            max-width: 600px;
+            max-width: 800px;
+            margin-top: 20px;
         }
 
         .welcome-prompt-box {
             background-color: var(--welcome-prompt-bg);
             color: var(--welcome-prompt-text-color);
-            padding: 15px;
+            padding: 20px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.2s ease;
+            font-size: 15px;
+            transition: background-color 0.2s;
             text-align: left;
-            line-height: 1.4;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
         }
 
         .welcome-prompt-box:hover {
@@ -563,6 +648,58 @@
         .delete-history-btn:hover {
             color: var(--error-color);
         }
+
+        .user-profile-icon {
+            width: 32px;
+            height: 32px;
+            background-color: #F9B93F; /* Yellow button color */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0D4D40; /* Dark green color */
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* User profile dropdown menu */
+        .user-dropdown {
+            position: absolute;
+            top: 55px;
+            right: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            width: 180px;
+            z-index: 100;
+            overflow: hidden;
+            display: none;
+        }
+        
+        .user-dropdown.visible {
+            display: block;
+        }
+        
+        .user-dropdown-item {
+            padding: 12px 16px;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        
+        .user-dropdown-item:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .user-dropdown-item svg {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+        }
+
     </style>
 </head>
 <body>
@@ -576,12 +713,86 @@
                 New chat
             </button>
         </div>
-        <div class="history-list" id="history-list"></div>
-        <div class="sidebar-footer">
-            <div class="user-info" id="user-info" onclick="toggleUserMenu()">
-                <div class="user-avatar" id="user-avatar">U</div>
-                <div class="user-name" id="username-display">User</div>
+        <div class="sidebar-section-header">Recent</div>
+        <div class="history-list" id="history-list">
+            <!-- Example items that will be replaced dynamically -->
+            <div class="history-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                    <path d="M22 4L12 14.01l-3-3"/>
+                </svg>
+                <span>This is a sample chat...</span>
             </div>
+            <div class="history-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                    <path d="M22 4L12 14.01l-3-3"/>
+                </svg>
+                <span>This is a sample chat...</span>
+            </div>
+            <div class="history-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                    <path d="M22 4L12 14.01l-3-3"/>
+                </svg>
+                <span>This is a sample chat...</span>
+            </div>
+            <div class="history-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                    <path d="M22 4L12 14.01l-3-3"/>
+                </svg>
+                <span>This is a sample chat...</span>
+            </div>
+            <div class="history-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                    <path d="M22 4L12 14.01l-3-3"/>
+                </svg>
+                <span>This is a sample chat...</span>
+            </div>
+            <div class="history-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                    <path d="M22 4L12 14.01l-3-3"/>
+                </svg>
+                <span>This is a sample chat...</span>
+            </div>
+            <div class="history-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                    <path d="M22 4L12 14.01l-3-3"/>
+                </svg>
+                <span>This is a sample chat...</span>
+            </div>
+            <div class="history-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                    <path d="M22 4L12 14.01l-3-3"/>
+                </svg>
+                <span>This is a sample chat...</span>
+            </div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="sidebar-footer-item" onclick="showHelp()">
+                <svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v2h-2zm0 4h2v6h-2z"></path>
+                </svg>
+                <span>Help</span>
+            </div>
+            <div class="sidebar-footer-item" onclick="showActivity()">
+                <svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-.22-13.88c.04-.05.07-.09.12-.12.05-.04.1-.07.15-.09.3-.14.62-.21.95-.21s.65.07.95.21c.05.02.1.05.15.09.05.03.08.07.12.12.16.18.27.39.33.61.06.22.09.45.09.68s-.03.46-.09.68c-.06.22-.17.43-.33.61l-3.23 3.23c-.1.1-.15.21-.15.32v.54h1.5v-.55c0-.04.01-.08.02-.11.02-.04.04-.07.06-.09l3.23-3.23c.24-.24.43-.52.56-.82.13-.3.2-.63.2-.96s-.07-.66-.2-.96c-.13-.3-.32-.58-.56-.82-.24-.24-.52-.43-.82-.56-.3-.13-.63-.2-.96-.2s-.66.07-.96.2c-.3.13-.58.32-.82.56-.24.24-.43.52-.56.82-.13.3-.2.63-.2.96s.07.66.2.96c.13.3.32.58.56.82L12 12.01l-1.78-1.78c-.16-.18-.27-.39-.33-.61-.06-.22-.09-.45-.09-.68s.03-.46.09-.68c.05-.23.17-.44.32-.62zM11 15h2v2h-2z"></path>
+                </svg>
+                <span>Activity</span>
+            </div>
+            <div class="sidebar-footer-item" onclick="showSettings()">
+                <svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-.22-13.88c.04-.05.07-.09.12-.12.05-.04.1-.07.15-.09.3-.14.62-.21.95-.21s.65.07.95.21c.05.02.1.05.15.09.05.03.08.07.12.12.16.18.27.39.33.61.06.22.09.45.09.68s-.03.46-.09.68c-.06.22-.17.43-.33.61l-3.23 3.23c-.1.1-.15.21-.15.32v.54h1.5v-.55c0-.04.01-.08.02-.11.02-.04.04-.07.06-.09l3.23-3.23c.24-.24.43-.52.56-.82.13-.3.2-.63.2-.96s-.07-.66-.2-.96c-.13-.3-.32-.58-.56-.82-.24-.24-.52-.43-.82-.56-.3-.13-.63-.2-.96-.2s-.66.07-.96.2c-.3.13-.58.32-.82.56-.24.24-.43.52-.56.82-.13.3-.2.63-.2.96s.07.66.2.96c.13.3.32.58.56.82L12 12.01l-1.78-1.78c-.16-.18-.27-.39-.33-.61-.06-.22-.09-.45-.09-.68s.03-.46.09-.68c.05-.23.17-.44.32-.62zM11 15h2v2h-2z"></path>
+                </svg>
+                <span>Settings</span>
+            </div>
+            
         </div>
     </div>
 
@@ -589,12 +800,23 @@
     <div class="main-content">
         <div class="chat-header">
             <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path>
                 </svg>
             </button>
             <div class="chat-title" id="chat-title">ChatWithMe</div>
-            <div></div> <!-- Spacer for flex alignment -->
+            <div class="user-profile-icon" id="user-profile-icon" onclick="toggleUserDropdown()">
+                <span id="user-initial">U</span>
+            </div>
+            
+            <div class="user-dropdown" id="user-dropdown">
+                <div class="user-dropdown-item" onclick="logout()">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M5 21q-.825 0-1.413-.587Q3 19.825 3 19V5q0-.825.587-1.413Q4.175 3 5 3h7v2H5v14h7v2Zm11-4-1.375-1.45 2.55-2.55H9v-2h8.175l-2.55-2.55L16 7l5 5Z"></path>
+                    </svg>
+                    Logout
+                </div>
+            </div>
         </div>
         
         <div class="chat-container" id="chatbox">
@@ -615,41 +837,63 @@
             <div class="input-box">
                 <textarea class="input-field" id="prompt" placeholder="Enter a prompt here" rows="1"></textarea>
                 <button class="send-button" id="send-button" onclick="sendMessage()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
                     </svg>
                 </button>
             </div>
             <div class="status-text" id="status"></div>
         </div>
+        <div class="footer-text">ChatWithMe may make mistakes. Please check important information.</div>
     </div>
 
     <!-- Auth Modal -->
-    <div class="auth-modal" id="auth-modal" style="display: none;">
+    <div class="auth-modal" id="auth-modal" style="display: flex;">
         <div class="auth-container">
             <div class="auth-header">
-                <div class="auth-title" id="auth-title">Welcome</div>
-                <div class="auth-subtitle" id="auth-subtitle">Sign in to continue</div>
+                <div class="auth-title" id="auth-title">Login</div>
             </div>
             
             <div id="login-form">
                 <form class="auth-form" onsubmit="event.preventDefault(); login();">
-                    <input type="text" class="auth-input" id="login-username" placeholder="Username" required>
-                    <input type="password" class="auth-input" id="login-password" placeholder="Password" required>
-                    <button type="submit" class="auth-button">Sign In</button>
+                    <div class="auth-input-group">
+                        <label for="login-username">Username</label>
+                        <input type="text" class="auth-input" id="login-username" required>
+                    </div>
+                    <div class="auth-input-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" class="auth-input" id="login-password" required>
+                    </div>
+                    <button type="submit" class="auth-button">Login</button>
                     <div class="auth-error" id="login-error"></div>
                 </form>
                 <div class="auth-switch">
-                    Don't have an account yet? <button class="auth-switch-button" onclick="showSignup()">Sign up</button>
+                    Don't have an account? <button class="auth-switch-button" onclick="showSignup()">Sign up</button>
                 </div>
             </div>
             
             <div id="signup-form" style="display: none;">
                 <form class="auth-form" onsubmit="event.preventDefault(); signup();">
-                    <input type="text" class="auth-input" id="signup-username" placeholder="Username" required>
-                    <input type="email" class="auth-input" id="signup-email" placeholder="Email (optional)">
-                    <input type="password" class="auth-input" id="signup-password" placeholder="Password" required>
-                    <button type="submit" class="auth-button">Create Account</button>
+                    <div class="auth-input-group">
+                        <label for="signup-username">Username</label>
+                        <input type="text" class="auth-input" id="signup-username" required>
+                    </div>
+                    <div class="auth-input-group">
+                        <label for="signup-email">Email (optional)</label>
+                        <input type="email" class="auth-input" id="signup-email">
+                    </div>
+                    <div class="auth-input-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" class="auth-input" id="signup-password" required>
+                    </div>
+                    <div class="auth-input-group">
+                        <label for="signup-role">Role</label>
+                        <select class="auth-input" id="signup-role">
+                            <option value="user">User</option>
+                            <option value="client">Client</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="auth-button">Sign up</button>
                     <div class="auth-error" id="signup-error"></div>
                 </form>
                 <div class="auth-switch">
@@ -659,6 +903,8 @@
         </div>
     </div>
 
+    
+
     <script>
         // Authentication state
         let currentToken = null;
@@ -667,38 +913,36 @@
         let currentSessionId = null;
         let isSidebarVisible = true;
 
+        // Global flag to prevent multiple redirections
+        let authCheckInProgress = false;
+
         // DOM elements
         const chatbox = document.getElementById('chatbox');
         const promptInput = document.getElementById('prompt');
-        const fileInput = document.getElementById('file-input');
-        const fileNameDisplay = document.getElementById('file-name');
-        const removeFileButton = document.getElementById('remove-file');
         const statusText = document.getElementById('status');
         const historyList = document.getElementById('history-list');
         const sidebar = document.getElementById('sidebar');
         const sidebarToggle = document.getElementById('sidebar-toggle');
         const chatTitle = document.getElementById('chat-title');
         const sendButton = document.getElementById('send-button');
+        const welcomeScreen = document.getElementById('welcome-screen');
         
         // Auth DOM Elements
         const authModal = document.getElementById('auth-modal');
         const loginForm = document.getElementById('login-form');
         const signupForm = document.getElementById('signup-form');
-        const userInfo = document.getElementById('user-info');
-        const usernameDisplay = document.getElementById('username-display');
-        const userAvatar = document.getElementById('user-avatar');
         const loginError = document.getElementById('login-error');
         const signupError = document.getElementById('signup-error');
         const authTitle = document.getElementById('auth-title');
-        const authSubtitle = document.getElementById('auth-subtitle');
 
         // Initialize the page
         document.addEventListener('DOMContentLoaded', function() {
-            if (localStorage.getItem('auth_token')) { // Only create new session if logged in
-                createNewSession(); // To show welcome screen or load history
-            } else {
-                showAuthModal(); // If not logged in, show auth modal
-            }
+            // Always show auth modal first, hide rest of UI
+            showAuthModal();
+            
+            // Hide main content until authenticated
+            document.querySelector('.main-content').style.visibility = 'hidden';
+            document.querySelector('.sidebar').style.visibility = 'hidden';
             
             // Set up enter key for prompt (shift+enter for new line)
             promptInput.addEventListener('keydown', function(event) {
@@ -714,27 +958,32 @@
                 this.style.height = (this.scrollHeight) + 'px';
             });
             
-            // Handle file input change
-            fileInput.addEventListener('change', function() {
-                if (this.files.length > 0) {
-                    fileNameDisplay.textContent = this.files[0].name;
-                    removeFileButton.style.display = 'block';
-                } else {
-                    fileNameDisplay.textContent = '';
-                    removeFileButton.style.display = 'none';
-                }
-            });
-            
-            // Handle remove file button
-            removeFileButton.addEventListener('click', function() {
-                fileInput.value = '';
-                fileNameDisplay.textContent = '';
-                this.style.display = 'none';
-            });
+            // Initialize the welcome screen content if needed
+            if (!welcomeScreen || welcomeScreen.children.length === 0) {
+                // Create welcome screen content
+                chatbox.innerHTML = `
+                    <div id="welcome-screen">
+                        <h1 class="welcome-title">Hello!</h1>
+                        <h2 class="welcome-subtitle">How can I help you today?</h2>
+                        <div class="welcome-prompts">
+                            <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Which gaming laptop should I buy?')">Which gaming laptop should I buy?</div>
+                            <div class="welcome-prompt-box" onclick="sendWelcomePrompt('What is the latest iphone right now?')">What is the latest iphone right now?</div>
+                            <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Compare between Dell and Macbook? Which one is better?')">Compare between Dell and Macbook? Which one is better?</div>
+                            <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Which laptop is the most suitable for Computer Science?')">Which laptop is the most suitable for Computer Science?</div>
+                        </div>
+                    </div>
+                `;
+            }
             
             // Check screen size for sidebar
             checkScreenSize();
             window.addEventListener('resize', checkScreenSize);
+            
+            // Check for stored auth token and try to authenticate automatically
+            const storedToken = localStorage.getItem('auth_token');
+            if (storedToken) {
+                checkAuthStatus();
+            }
         });
 
         function checkScreenSize() {
@@ -752,6 +1001,8 @@
             sidebar.classList.toggle('visible', isSidebarVisible);
         }
 
+
+
         // Auth Functions
         function showAuthModal() {
             authModal.style.display = 'flex';
@@ -765,8 +1016,7 @@
         function showLogin() {
             loginForm.style.display = 'block';
             signupForm.style.display = 'none';
-            authTitle.textContent = 'Welcome back';
-            authSubtitle.textContent = 'Sign in to continue';
+            authTitle.textContent = 'Login';
             loginError.textContent = '';
             if (document.getElementById('signup-username')) document.getElementById('login-username').value = document.getElementById('signup-username').value;
         }
@@ -774,19 +1024,35 @@
         function showSignup() {
             loginForm.style.display = 'none';
             signupForm.style.display = 'block';
-            authTitle.textContent = 'Create account';
-            authSubtitle.textContent = 'Get started with your AI assistant';
+            authTitle.textContent = 'Sign up';
             signupError.textContent = '';
             if (document.getElementById('login-username')) document.getElementById('signup-username').value = document.getElementById('login-username').value;
         }
 
         function showUserInfo() {
-            usernameDisplay.textContent = currentUsername;
-            userAvatar.textContent = currentUsername.charAt(0).toUpperCase();
+            // We don't need to update user elements since they're no longer in the UI
+            // Just hide the auth modal and show the main UI
             hideAuthModal();
+            
+            // Update user profile icon
+            if (currentUsername) {
+                document.getElementById('user-initial').textContent = currentUsername.charAt(0).toUpperCase();
+            }
+            
+            // Show main content after authentication
+            document.querySelector('.main-content').style.visibility = 'visible';
+            document.querySelector('.sidebar').style.visibility = 'visible';
+            
+            // Show welcome screen initially after login
+            showWelcomeScreen();
         }
         
         async function checkAuthStatus() {
+            // Only run auth check if not already in progress
+            if (authCheckInProgress) return;
+            
+            authCheckInProgress = true;
+            
             const token = localStorage.getItem('auth_token');
             if (token) {
                 try {
@@ -815,18 +1081,34 @@
                         currentToken = token;
                         currentUserId = user.user_id;
                         currentUsername = user.username;
+                        
+                        // Check if user is a client and redirect to client dashboard
+                        if (user.role === 'client') {
+                            console.log("User is a client, redirecting to client dashboard");
+                            localStorage.setItem('userRole', user.role);
+                            localStorage.setItem('accessToken', token); // Also set the token in the format client dashboard expects
+                            
+                            // Use replace to prevent back button issues
+                            window.location.replace('/client');
+                            return;
+                        }
+                        
+                        // User is not a client, proceed with normal chat UI
                         showUserInfo();
                         
-                        // Load chat history and upload history
+                        // Load chat history
                         listChatHistory();
+                        authCheckInProgress = false;
                         return;
                     }
                 } catch (error) {
                     console.error("Auth check failed:", error);
                 }
             }
+            authCheckInProgress = false;
             showAuthModal();
         }
+        
         // New function to handle welcome prompt clicks
         function sendWelcomePrompt(promptText) {
             if (!currentToken) { // Ensure user is logged in
@@ -834,14 +1116,14 @@
                 return;
             }
             promptInput.value = promptText;
-            sendMessage();
-            // Hide welcome screen immediately after clicking a prompt
-            const welcomeScreen = document.getElementById('welcome-screen');
-            if (welcomeScreen) {
-                welcomeScreen.style.display = 'none';
-            }
+            sendMessage(); // This will handle creating session if needed
+            // hideWelcomeScreen will be called by appendMessage
         }
+        
         async function login() {
+            // Only run login if not already in auth check process
+            if (authCheckInProgress) return;
+            
             const username = document.getElementById('login-username').value;
             const password = document.getElementById('login-password').value;
             
@@ -851,6 +1133,8 @@
             }
             
             try {
+                authCheckInProgress = true;
+                
                 const requestBody = {
                     username: username,
                     password: password
@@ -873,6 +1157,7 @@
                     } else {
                         loginError.textContent = errorMessage;
                     }
+                    authCheckInProgress = false;
                     return;
                 }
                 
@@ -882,8 +1167,19 @@
                 currentUsername = username;
                 
                 localStorage.setItem('auth_token', currentToken);
+                
+                // Check if user is a client and redirect to client dashboard
+                if (data.role === 'client') {
+                    console.log("User is a client, redirecting to client dashboard after login");
+                    localStorage.setItem('userRole', data.role);
+                    localStorage.setItem('accessToken', currentToken); // Also set the token in the format client dashboard expects
+                    
+                    // Use replace to prevent back button issues
+                    window.location.replace('/client');
+                    return;
+                }
+                
                 showUserInfo();
-                sendWelcomePrompt(promptText)
                 
                 // Clear chat and history
                 chatbox.innerHTML = '';
@@ -892,11 +1188,17 @@
                 // Load chat history
                 listChatHistory();
                 
+                // Explicitly show welcome screen
+                showWelcomeScreen();
+                
                 // Start a new session
                 await createNewSession();
+                
+                authCheckInProgress = false;
             } catch (error) {
                 console.error('Login error:', error);
                 loginError.textContent = error.message;
+                authCheckInProgress = false;
             }
         }
 
@@ -904,6 +1206,7 @@
             const username = document.getElementById('signup-username').value;
             const email = document.getElementById('signup-email').value;
             const password = document.getElementById('signup-password').value;
+            const role = document.getElementById('signup-role').value;
             
             if (!username || !password) {
                 signupError.textContent = 'Username and password are required';
@@ -919,7 +1222,8 @@
                     body: JSON.stringify({
                         username: username,
                         email: email || null,
-                        password: password
+                        password: password,
+                        role: role
                     })
                 });
                 
@@ -946,7 +1250,7 @@
             currentSessionId = null;
             localStorage.removeItem('auth_token');
             
-            // Clear chat area and show welcome screen (or it will be handled by checkAuthStatus->showAuthModal)
+            // Clear chat area and show welcome screen
             const welcomeScreen = document.getElementById('welcome-screen');
             const messages = Array.from(chatbox.children).filter(child => child.id !== 'welcome-screen');
             messages.forEach(msg => msg.remove());
@@ -955,38 +1259,43 @@
             }
             chatTitle.textContent = "ChatWithMe";
 
+            // Clear history list
             historyList.innerHTML = '';
-            showAuthModal(); // This should be the primary action
+            
+            // Hide main UI and show auth modal
+            document.querySelector('.main-content').style.visibility = 'hidden';
+            document.querySelector('.sidebar').style.visibility = 'hidden';
+            showAuthModal();
         }
 
-        function toggleUserMenu() {
-            // In a real app, you might show a dropdown menu here
-            if (confirm("Do you want to logout?")) {
-                logout();
-            }
+        // Toggle user dropdown menu
+        function toggleUserDropdown() {
+            const dropdown = document.getElementById('user-dropdown');
+            dropdown.classList.toggle('visible');
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function closeDropdown(e) {
+                const isClickInside = document.getElementById('user-profile-icon').contains(e.target) || 
+                                     document.getElementById('user-dropdown').contains(e.target);
+                if (!isClickInside) {
+                    dropdown.classList.remove('visible');
+                    document.removeEventListener('click', closeDropdown);
+                }
+            });
         }
 
         // Chat Functions
         function appendMessage(role, content) {
-            const welcomeScreen = document.getElementById('welcome-screen');
-            if (welcomeScreen && welcomeScreen.style.display !== 'none') {
-                welcomeScreen.style.display = 'none';
-            }
+            hideWelcomeScreen(); // Use the dedicated function to hide welcome screen
             
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${role === 'user' ? 'user-message' : 'assistant-message'}`;
             
-            const avatarName = role === 'user' ? 
-                (currentUsername ? currentUsername.charAt(0).toUpperCase() : 'U') : 
-                'AI';
             const displayName = role === 'user' ? (currentUsername || 'User') : 'Assistant';
                 
             messageDiv.innerHTML = `
                 <div class="message-content">
-                    <div class="message-role">${displayName}</div>
-                    <div class="message-bubble">
-                        <div class="message-text">${formatMessageContent(content)}</div>
-                    </div>
+                    ${formatMessageContent(content)}
                 </div>
             `;
             
@@ -1013,19 +1322,10 @@
 
         function showLoadingIndicator() {
             const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'message assistant-message'; // Added assistant-message for styling consistency
+            loadingDiv.className = 'message assistant-message loading-message';
             loadingDiv.innerHTML = `
                 <div class="message-content">
-                    <div class="message-role">Assistant</div>
-                    <div class="message-bubble">
-                        <div class="message-text">
-                            <div class="loading-indicator">
-                                <div class="loading-dot"></div>
-                                <div class="loading-dot"></div>
-                                <div class="loading-dot"></div>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="loading-dots"></div>
                 </div>
             `;
             chatbox.appendChild(loadingDiv);
@@ -1044,14 +1344,11 @@
             currentSessionId = null; // Reset session ID
             // chatTitle.textContent = 'ChatWithMe'; // Keep main title or update based on new chat logic
 
-            // Clear only messages, keep/show welcome screen structure
-            const welcomeScreen = document.getElementById('welcome-screen');
-            const messages = Array.from(chatbox.children).filter(child => child.id !== 'welcome-screen');
-            messages.forEach(msg => msg.remove());
-
-            if (welcomeScreen) {
-                welcomeScreen.style.display = 'flex';
-            }
+            // Clear chat area completely
+            chatbox.innerHTML = '';
+            
+            // Show welcome screen for new session
+            showWelcomeScreen();
             
             await listChatHistory(); // Refresh history list, new chat won't be active yet
         }
@@ -1064,6 +1361,9 @@
             
             const prompt = promptInput.value.trim();
             if (!prompt) return;
+
+            // Make sure to hide the welcome screen
+            hideWelcomeScreen();
 
             appendMessage('user', prompt);
             promptInput.value = '';
@@ -1251,10 +1551,9 @@
 
                 if (sessions.length === 0) {
                     historyList.innerHTML = '<div class="history-item" style="color: var(--text-color-sidebar); font-style: italic;">No chat history</div>';
-                    // Ensure welcome screen is shown if no history and no current chat messages
-                    const messageElements = chatbox.querySelectorAll('.message, .user-message, .assistant-message');
-                    if (document.getElementById('welcome-screen') && messageElements.length === 0) {
-                        document.getElementById('welcome-screen').style.display = 'flex';
+                    // Ensure welcome screen is shown if no history and no current chat selected
+                    if (!currentSessionId) {
+                        showWelcomeScreen();
                     }
                     return;
                 }
@@ -1263,26 +1562,26 @@
                     const sessionDiv = document.createElement('div');
                     sessionDiv.className = `history-item ${session.session_id === currentSessionId ? 'active' : ''}`;
                     
-                    // Format date
-                    const date = new Date(session.last_updated);
-                    const formattedDate = date.toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric' }) + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    
                     const sessionName = session.session_name || (session.first_message_summary ? (session.first_message_summary.length > 25 ? session.first_message_summary.substring(0,22) + "..." : session.first_message_summary) : 'New Chat');
 
                     sessionDiv.innerHTML = `
-                        <div>${sessionName}</div>
-                        <div style="font-size: 12px; color: ${session.session_id === currentSessionId ? 'var(--button-text-color)' : 'var(--text-color-secondary)'}; opacity: 0.7;">${formattedDate}</div>
-                        <button class="delete-history-btn" onclick="event.stopPropagation(); deleteSession('${session.session_id}')">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                            </svg>
-                        </button>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#AAAAAA" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                            <path d="M22 4L12 14.01l-3-3"/>
+                        </svg>
+                        <span>${sessionName}</span>
                     `;
                     
                     sessionDiv.onclick = () => loadChatHistory(session.session_id);
                     
                     historyList.appendChild(sessionDiv);
                 });
+                
+                // If no session is selected but we have sessions, we could optionally
+                // auto-select the first one or just show welcome screen
+                if (!currentSessionId && sessions.length > 0) {
+                    showWelcomeScreen();
+                }
 
             } catch (error) {
                 console.error("Error loading sessions:", error);
@@ -1291,6 +1590,11 @@
                         Failed to load chat history
                     </div>
                 `;
+                
+                // Show welcome screen if we can't load sessions
+                if (!currentSessionId) {
+                    showWelcomeScreen();
+                }
             }
         }
 
@@ -1316,8 +1620,10 @@
                 if (currentSessionId === sessionId) {
                     chatbox.innerHTML = '';
                     currentSessionId = null;
-                    chatTitle.textContent = 'New Chat';
-                    appendMessage('assistant', 'Hello! How can I assist you today?');
+                    chatTitle.textContent = 'ChatWithMe';
+                    
+                    // Show welcome screen after deleting current session
+                    showWelcomeScreen();
                 }
                 
                 // Refresh the history list
@@ -1333,6 +1639,9 @@
             if (!currentUserId || !currentToken) return; // Added currentToken check
             
             try {
+                // Hide welcome screen when loading a session
+                hideWelcomeScreen();
+                
                 currentSessionId = sessionId;
                 const response = await fetch(
                     `http://localhost:5000/api/load_chat_history/${currentUserId}/${sessionId}`, {
@@ -1372,10 +1681,8 @@
                         }
                     }
                 } else {
-                    // No messages in this session, so show the welcome screen.
-                    if (welcomeScreen) {
-                        welcomeScreen.style.display = 'flex';
-                    }
+                    // No messages in this session, so show the welcome screen
+                    showWelcomeScreen();
                     chatTitle.textContent = "New Chat"; // Or session name if available but empty
                 }
                 
@@ -1388,6 +1695,66 @@
                 console.error("Load error:", error);
                 appendMessage('system', `Failed to load chat: ${error.message}`);
             }
+        }
+
+        // Placeholder functions for sidebar buttons
+        function showHelp() {
+            alert('Help functionality will be implemented in future versions');
+        }
+        
+        function showActivity() {
+            alert('Activity tracking will be implemented in future versions');
+        }
+
+        function showSettings() {
+            alert('Setting functionality will be implemented in future version')
+        }
+
+        // Show welcome screen function
+        function showWelcomeScreen() {
+            const welcomeScreen = document.getElementById('welcome-screen');
+            const messagesContainer = document.getElementById('chatbox');
+            if (welcomeScreen) {
+                welcomeScreen.style.display = 'flex';
+                // Make sure it's a child of the chatbox if it isn't already
+                if (!chatbox.contains(welcomeScreen)) {
+                    chatbox.innerHTML = ''; // Clear chatbox first
+                    chatbox.appendChild(welcomeScreen);
+                }
+            } else {
+                // If welcome screen doesn't exist, create it
+                chatbox.innerHTML = `
+                    <div id="welcome-screen">
+                        <h1 class="welcome-title">Hello!</h1>
+                        <h2 class="welcome-subtitle">How can I help you today?</h2>
+                        <div class="welcome-prompts">
+                            <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Which gaming laptop should I buy?')">Which gaming laptop should I buy?</div>
+                            <div class="welcome-prompt-box" onclick="sendWelcomePrompt('What is the latest iphone right now?')">What is the latest iphone right now?</div>
+                            <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Compare between Dell and Macbook? Which one is better?')">Compare between Dell and Macbook? Which one is better?</div>
+                            <div class="welcome-prompt-box" onclick="sendWelcomePrompt('Which laptop is the most suitable for Computer Science?')">Which laptop is the most suitable for Computer Science?</div>
+                        </div>
+                    </div>
+                `;
+            }
+            // Hide existing messages temporarily
+            const messages = Array.from(messagesContainer.children).filter(child => child.id !== 'welcome-screen');
+            messages.forEach(msg => {
+                msg.style.display = 'none';
+            });
+            chatTitle.textContent = 'ChatWithMe'; // Reset title for welcome screen
+        }
+
+        // Hide welcome screen function
+        function hideWelcomeScreen() {
+            const welcomeScreen = document.getElementById('welcome-screen');
+            if (welcomeScreen) {
+                welcomeScreen.style.display = 'none';
+            }
+            // Show any hidden messages
+            const messages = Array.from(chatbox.children).filter(child => child.id !== 'welcome-screen');
+            messages.forEach(msg => {
+                msg.style.display = '';
+            });
         }
 
     </script>

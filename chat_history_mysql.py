@@ -15,7 +15,7 @@ class ChatHistoryMySQL:
             port=3306,
             user="root",
             password="12345678",
-            database="movie"
+            database="audrey"
         )
 
     def _initialize_database(self):
@@ -31,13 +31,14 @@ class ChatHistoryMySQL:
         )
         """)
 
-        # Create uploaded_files table
+        # Create user_auth table with role field
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_auth (
             user_id VARCHAR(255) PRIMARY KEY,
             username VARCHAR(255) UNIQUE NOT NULL,
             email VARCHAR(255) UNIQUE,
             password_hash VARCHAR(255) NOT NULL,
+            role ENUM('client', 'user') NOT NULL DEFAULT 'user',
             created_at DATETIME NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
         )
@@ -280,11 +281,9 @@ class ChatHistoryMySQL:
         if hasattr(self, 'connection') and self.connection.is_connected():
             self.connection.close()
 
-
-    
     def check_username_exists(self, username: str) -> bool:
         """Check if a username already exists in the database"""
-        cursor = self.db.connection.cursor()
+        cursor = self.connection.cursor()
         cursor.execute("SELECT 1 FROM user_auth WHERE username = %s", (username,))
         exists = cursor.fetchone() is not None
         cursor.close()

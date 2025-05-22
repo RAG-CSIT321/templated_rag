@@ -7,9 +7,18 @@ from embedding_mysql import embedding_mysql
 import redis
 import hashlib
 import os
+import json
 from file_processor import FileProcessor
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 class MySQLChangeListener:
-    def __init__(self, host="127.0.0.1", port=3306, user="root", password="12345678", database="movie"):
+    def __init__(self, host=None, port=None, user=None, password=None, database=None):
         self.host = host
         self.port = port
         self.user = user
@@ -17,21 +26,56 @@ class MySQLChangeListener:
         self.database = database
         self.redis_client = redis.Redis(host='localhost', port=6379, db=0)
         self.store_data = StoreData()
-        
-    def connect_to_mysql(self):
+
+    def connect_to_mysql(self, connection_params=None):
         """Establish connection to MySQL server."""
         try:
-            connection = mysql.connector.connect(
-                host=self.host,
-                port=self.port,
-                user=self.user,
-                password=self.password,
-                database=self.database
-            )
+            # Use connection_params if provided, else use instance attributes
+            params = connection_params or {
+                'host': self.host,
+                'port': self.port,
+                'user': self.user,
+                'password': self.password,
+                'database': self.database
+            }
+            # Only proceed if all required params are present
+            if not all(params.get(key) for key in ['host', 'port', 'user', 'password', 'database']):
+                logger.error("Missing required connection parameters")
+                return None
+            connection = mysql.connector.connect(**params)
             return connection
         except Error as e:
-            logging.error(f"Error connecting to MySQL: {e}")
+            logger.error(f"Error connecting to MySQL: {e}")
             return None
+
+
+    def add_connection(self, connection_params):
+        """
+        Add a new database connection to monitor.
+        
+        Args:
+            connection_params (dict): Connection parameters (host, port, etc.)
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # Generate a unique key for the connection (e.g., host:port)
+            
+            # Test the connection first
+            conn = self.connect_to_mysql(connection_params)
+            if conn:
+                conn.close()
+                # Add to connections dictionary
+                
+                # Save to Redis
+                return True
+            else:
+                logger.error(f"Could not establish connection for MYSQL Listener")
+                return False
+        except Exception as e:
+            logger.error(f"Error adding connection: {e}")
+            return False
 
     def clear_redis_embeddings(self):
         """Clear all embeddings from Redis."""
@@ -62,7 +106,7 @@ class MySQLChangeListener:
         """Update embeddings with latest MySQL data."""
         try:
             # Get fresh data from MySQL
-            documents = embedding_mysql()
+            documents = embedding_mysql(self.host,self.port,self.user,self.password,self.database)
             # Process and store new embeddings
             self.store_data.process_data(documents, False)
             logging.info("Successfully updated MySQL embeddings")
@@ -121,12 +165,9 @@ class MySQLChangeListener:
                 time.sleep(5)  # Wait before retrying
 
 if __name__ == "__main__":
-    # Configure logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-    
-    # Start the listener
     listener = MySQLChangeListener()
-    listener.monitor_changes() 
+    listener.monitor_changes()

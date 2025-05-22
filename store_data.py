@@ -35,7 +35,7 @@ class StoreData:
         texts=None
         # Split text into chunks
         if split:
-            splitter = RecursiveCharacterTextSplitter(chunk_size=256, chunk_overlap=50)
+            splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=250)
             texts = splitter.split_documents(documents)
         else:
             texts = documents
@@ -64,5 +64,5 @@ class StoreData:
         self.retriever = vstore.as_retriever(search_kwargs={"k": 4})
     def load_retriever(self):
         return self.retriever
-    def store_mysql(self):
-        self.process_data(embedding_mysql(),False)
+    def store_mysql(self,host,port,user,password,database):
+        self.process_data(embedding_mysql(host,port,user,password,database),False)

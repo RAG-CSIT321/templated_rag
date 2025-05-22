@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Request, UploadFile, File, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, Request, UploadFile, File, HTTPException, Depends, Form
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 import os
@@ -8,6 +8,8 @@ import logging
 import threading
 import redis
 from datetime import datetime
+import mysql.connector
+import time
 
 from file_processor import FileProcessor
 from query_engine import QueryEngine
@@ -17,7 +19,6 @@ from mysql_listener import MySQLChangeListener
 
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from auth_service import AuthService, SECRET_KEY, ALGORITHM
-from fastapi import Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
@@ -28,6 +29,19 @@ class SaveMessageRequest(BaseModel):
     role: str
     content: str
 app = FastAPI()
+
+# Initialize MySQL listener
+mysql_listener = MySQLChangeListener()
+
+# Start MySQL listener in background thread
+def start_mysql_listener():
+    try:
+        mysql_listener.monitor_changes()
+    except Exception as e:
+        logger.error(f"MySQL listener error: {e}")
+
+listener_thread = threading.Thread(target=start_mysql_listener, daemon=True)
+listener_thread.start()
 
 # Configure logging
 logging.basicConfig(
@@ -55,8 +69,10 @@ chat_history = ChatHistoryMySQL()
 query_engine = QueryEngine()
 file_processor = FileProcessor(data_dir="data")
 store_data = StoreData()
-store_data.store_mysql()
-file_processor.retriever = store_data.load_retriever()
+
+# Skip default database initialization - we'll only use client-provided databases
+logger.info("Initialized RAG system - waiting for client database connections or file uploads")
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 auth_service = AuthService()
 
@@ -69,6 +85,7 @@ async def register_user(
         username = data.get('username')
         password = data.get('password')
         email = data.get('email')
+        role = data.get('role', 'user')  # Default to 'user' if not specified
         
         # Check if username exists before attempting registration
         if auth_service.check_username_exists(username):
@@ -80,7 +97,8 @@ async def register_user(
         result = auth_service.register_user(
             username,
             password,
-            email
+            email,
+            role
         )
         return JSONResponse(content=result)
     except HTTPException as e:
@@ -127,6 +145,39 @@ async def read_users_me(token: str = Depends(oauth2_scheme)):
 async def home(request: Request):
     """Render the main chat UI"""
     return templates.TemplateResponse("chat_ui.html", {"request": request})
+
+@app.get("/client", response_class=HTMLResponse)
+async def client_dashboard(request: Request):
+    return templates.TemplateResponse("client_dashboard.html", {"request": request})
+
+@app.post("/api/connect_database")
+async def connect_database(request: Request, token: str = Depends(oauth2_scheme)):
+    try:
+        current_user = auth_service.get_current_user(token)
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        if current_user['role'] != "client":
+            raise HTTPException(status_code=403, detail="Only clients can connect databases")
+        data = await request.json()
+        connection_params = {
+            'host': data.get('host'),
+            'port': data.get('port'),
+            'user': data.get('username'),  # Map 'username' to 'user' for MySQL
+            'password': data.get('password'),
+            'database': data.get('database')
+        }
+        if not all([connection_params[key] for key in ['host', 'port', 'user', 'password', 'database']]):
+            raise HTTPException(status_code=400, detail="All database connection fields are required")
+        if mysql_listener.add_connection(connection_params):
+            return JSONResponse(content={
+                "status": "success",
+                "message": "Database connected successfully. Your data is being processed and will be used for AI responses."
+            })
+        else:
+            raise HTTPException(status_code=400, detail="Failed to connect to database")
+    except Exception as e:
+        logger.error(f"Database connection error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/interact_with_agent")
 async def interact_with_agent(request: Request, token: str = Depends(oauth2_scheme)):
@@ -190,7 +241,7 @@ async def interact_with_agent(request: Request, token: str = Depends(oauth2_sche
             },
             status_code=200
         )
-
+        
 @app.options("/api/interact_with_agent")
 async def handle_options():
     return JSONResponse(content={})
@@ -306,13 +357,14 @@ async def refresh_token(request: Request):
         
         # Create a new access token
         new_token = auth_service.create_access_token(
-            data={"sub": current_user['username'], "user_id": current_user['user_id']},
+            data={"sub": current_user['username'], "user_id": current_user['user_id'], "role": current_user['role']},
             expires_delta=timedelta(minutes=30)
         )
         
         return {
             "access_token": new_token,
-            "token_type": "bearer"
+            "token_type": "bearer",
+            "role": current_user['role']
         }
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
@@ -345,9 +397,6 @@ async def create_new_session(user_id: str, request: Request):
 if __name__ == "__main__":
     import uvicorn
 
-    mysql_listener = MySQLChangeListener()
-    listener_thread = threading.Thread(target=mysql_listener.monitor_changes, daemon=True)
-    listener_thread.start()
     uvicorn.run(
         app,
         host=os.getenv('HOST', '0.0.0.0'),
