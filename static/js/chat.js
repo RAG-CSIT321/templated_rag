@@ -744,7 +744,126 @@ function hideHelp() {
 }
 
 function showActivity() {
-    alert('Activity tracking will be implemented in future versions');
+    document.getElementById('activity-modal').style.display = 'flex';
+    loadActivityData();
+}
+
+function hideActivity() {
+    document.getElementById('activity-modal').style.display = 'none';
+}
+
+async function loadActivityData() {
+    if (!currentUserId || !currentToken) return;
+    
+    try {
+        // Load recent sessions
+        const sessionsResponse = await fetch(`http://localhost:5000/api/list_chat_sessions/${currentUserId}`, {
+            headers: {
+                'Authorization': `Bearer ${currentToken}`
+            }
+        });
+        
+        if (!sessionsResponse.ok) {
+            throw new Error(`Failed to load sessions: ${sessionsResponse.status}`);
+        }
+
+        const sessionsData = await sessionsResponse.json();
+        const sessions = sessionsData.data || [];
+        
+        // Update recent sessions
+        const recentSessionsContainer = document.getElementById('recent-sessions');
+        recentSessionsContainer.innerHTML = '';
+        
+        if (sessions.length === 0) {
+            recentSessionsContainer.innerHTML = '<div class="activity-item">No recent sessions</div>';
+        } else {
+            sessions.slice(0, 5).forEach(session => {
+                const sessionDiv = document.createElement('div');
+                sessionDiv.className = 'activity-item';
+                sessionDiv.innerHTML = `
+                    <div class="session-info">
+                        <div class="session-name">${session.session_name || 'New Chat'}</div>
+                        <div class="session-date">${formatDate(session.created_at)}</div>
+                    </div>
+                    <button class="load-session-btn" onclick="loadChatHistory('${session.session_id}'); hideActivity();">
+                        View
+                    </button>
+                `;
+                recentSessionsContainer.appendChild(sessionDiv);
+            });
+        }
+
+        // Calculate and update statistics
+        const totalMessages = sessions.reduce((sum, session) => sum + (session.message_count || 0), 0);
+        const activeDays = new Set(sessions.map(session => new Date(session.created_at).toDateString())).size;
+        const avgSessionLength = sessions.length > 0 ? 
+            Math.round(totalMessages / sessions.length) : 0;
+
+        document.getElementById('total-messages').textContent = totalMessages;
+        document.getElementById('active-days').textContent = activeDays;
+        document.getElementById('avg-session-length').textContent = `${avgSessionLength} msgs`;
+
+        // Extract and display popular topics
+        const topics = extractPopularTopics(sessions);
+        const topicsContainer = document.getElementById('popular-topics');
+        topicsContainer.innerHTML = '';
+        
+        if (topics.length === 0) {
+            topicsContainer.innerHTML = '<div class="activity-item">No topics found</div>';
+        } else {
+            topics.slice(0, 5).forEach(topic => {
+                const topicDiv = document.createElement('div');
+                topicDiv.className = 'activity-item';
+                topicDiv.innerHTML = `
+                    <div class="topic-info">
+                        <div class="topic-name">${topic.name}</div>
+                        <div class="topic-count">${topic.count} mentions</div>
+                    </div>
+                `;
+                topicsContainer.appendChild(topicDiv);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading activity data:', error);
+        document.getElementById('recent-sessions').innerHTML = 
+            '<div class="activity-item">Failed to load activity data</div>';
+    }
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+        return 'Today';
+    } else if (diffDays === 1) {
+        return 'Yesterday';
+    } else if (diffDays < 7) {
+        return `${diffDays} days ago`;
+    } else {
+        return date.toLocaleDateString();
+    }
+}
+
+function extractPopularTopics(sessions) {
+    const topics = new Map();
+    
+    sessions.forEach(session => {
+        if (session.first_message_summary) {
+            const words = session.first_message_summary.toLowerCase().split(/\s+/);
+            words.forEach(word => {
+                if (word.length > 3 && !['what', 'when', 'where', 'which', 'that', 'this', 'with'].includes(word)) {
+                    topics.set(word, (topics.get(word) || 0) + 1);
+                }
+            });
+        }
+    });
+    
+    return Array.from(topics.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
 }
 
 function showSettings() {
@@ -765,9 +884,6 @@ function applySettings(setting, value) {
         case 'messageDisplay':
             document.body.setAttribute('data-message-display', value);
             break;
-        case 'fontSize':
-            document.body.setAttribute('data-font-size', value);
-            break;
         case 'sendBehavior':
             break;
         case 'autoScroll':
@@ -787,7 +903,6 @@ function applySettings(setting, value) {
 function loadSavedSettings() {
     const settings = [
         'messageDisplay',
-        'fontSize',
         'sendBehavior',
         'autoScroll',
         'soundEnabled',
