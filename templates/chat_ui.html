@@ -378,11 +378,9 @@
                         <input type="password" class="auth-input" id="signup-password" required>
                     </div>
                     <div class="auth-input-group full-width">
-                        <label for="signup-role">Role</label>
-                        <select class="auth-input" id="signup-role">
-                            <option value="user">User</option>
-                            <option value="client">Client</option>
-                        </select>
+                        <label for="signup-keycode">Client Access Key (Optional)</label>
+                        <input type="password" class="auth-input" id="signup-keycode" placeholder="Enter keycode for client access">
+                        <small style="display: block; text-align: left; margin-top: 4px; color: #666;">Leave empty for regular user access</small>
                     </div>
                     <button type="submit" class="auth-button">Sign up</button>
                     <div class="auth-error" id="signup-error"></div>
@@ -870,10 +868,16 @@
             const username = document.getElementById('signup-username').value;
             const email = document.getElementById('signup-email').value;
             const password = document.getElementById('signup-password').value;
-            const role = document.getElementById('signup-role').value;
+            const keycode = document.getElementById('signup-keycode').value;
             
             if (!username || !password) {
                 signupError.textContent = 'Username and password are required';
+                return;
+            }
+
+            // Validate keycode if provided
+            if (keycode && keycode !== 'CLOCK') {
+                signupError.textContent = 'Invalid client access key';
                 return;
             }
             
@@ -887,7 +891,7 @@
                         username: username,
                         email: email || null,
                         password: password,
-                        role: role
+                        role: keycode === 'CLOCK' ? 'client' : 'user'
                     })
                 });
                 
