@@ -14,8 +14,8 @@ class ChatHistoryMySQL:
             host="127.0.0.1",
             port=3306,
             user="root",
-            password="12345678",
-            database="audrey"
+            password="16052004",
+            database="chathistory"
         )
 
     def _initialize_database(self):

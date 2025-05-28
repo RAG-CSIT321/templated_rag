@@ -7,7 +7,7 @@ import os
 from typing import Optional
 
 # Secret key for JWT - in production use a proper secret from environment variables
-SECRET_KEY = os.getenv("JWT_SECRET", "baohanxinhvailon14032004")
+SECRET_KEY = os.getenv("JWT_SECRET", "flyflylightlightJ97")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 100
 

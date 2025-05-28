@@ -1,22 +1,47 @@
+version: '3.8'
+
 services:
-  backend:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "5000:5000"
+    env_file:
+      - .env
     volumes:
-      - .:/app
-    command: gunicorn main:app --bind 0.0.0.0:5000 --workers 2
+      - ./data:/app/data
     depends_on:
-      - frontend
+      - redis
+      - mysql
+    networks:
+      - rag-network
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    volumes:
-      - ./frontend:/usr/share/nginx/html
+  redis:
+    image: redis:7.0
     ports:
-      - "3000:80" # Maps your frontend to port 3000
-    
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - rag-network
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345678
+      MYSQL_DATABASE: audrey
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - rag-network
+
+volumes:
+  redis-data:
+  mysql-data:
+
+networks:
+  rag-network:
+    driver: bridge
