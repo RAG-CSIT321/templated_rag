@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 def embedding_mysql(host, port, user, password, database):
     """
-    Extract data from a MySQL database table and convert it to Document objects for embedding.
+    Extract data from all tables in a MySQL database and convert it to Document objects for embedding.
     
     Args:
         host (str): Database host
@@ -14,10 +14,9 @@ def embedding_mysql(host, port, user, password, database):
         user (str): Database username
         password (str): Database password
         database (str): Database name
-        table (str, optional): Specific table to extract data from. If None, extracts from all tables.
         
     Returns:
-        list: List of Document objects containing the data
+        list: List of Document objects containing the data from all tables
     """
     try:
         conn = mysql.connector.connect(
@@ -28,21 +27,34 @@ def embedding_mysql(host, port, user, password, database):
             database=database
         )
         cursor = conn.cursor()
-        # Query
-        cursor.execute("SELECT * FROM test")
-        columns = [desc[0] for desc in cursor.description]
-        rows = cursor.fetchall()
-            
+        
+        # Get all tables in the database
+        cursor.execute("SHOW TABLES")
+        tables = [table[0] for table in cursor.fetchall()]
+        
         documents = []
         
-        for row in rows:
-            contents = dict(zip(columns, row))
-            # Add movies_database as the id
-            content = "\n".join(f"{col}: {val}" for col, val in contents.items())
-            content = "{" + content + "}"
-            metadata = {'source': 'movies_database'}
-            doc = Document(page_content=content, metadata=metadata)
-            documents.append(doc)
+        # Iterate through each table
+        for table in tables:
+            try:
+                # Query each table
+                cursor.execute(f"SELECT * FROM {table}")
+                columns = [desc[0] for desc in cursor.description]
+                rows = cursor.fetchall()
+                for row in rows:
+                    contents = dict(zip(columns, row))
+                    # Add table name as the source in metadata
+                    content = "\n".join(f"{col}: {val}" for col, val in contents.items())
+                    content = "{" + content + "}"
+                    metadata = {'source': f'{database}.{table}'}
+                    doc = Document(page_content=content, metadata=metadata)
+                    documents.append(doc)
+                
+                logger.info(f"Successfully extracted data from table '{table}'")
+                
+            except mysql.connector.Error as err:
+                logger.error(f"Error processing table '{table}': {err}")
+                continue
         
         # Cleanup
         cursor.close()

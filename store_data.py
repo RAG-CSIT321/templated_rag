@@ -20,7 +20,7 @@ class StoreData:
         self.data_dir = data_dir
         self.config = configg
         self.retriever = None
-        self.url = "redis://localhost:6379"
+        self.url = "redis://redis:6379"
         # Connect to Redis
         self.redis_client = Redis.from_url(self.url)
         self.embeddings = configg.MODEL_EMBEDDING_NAME

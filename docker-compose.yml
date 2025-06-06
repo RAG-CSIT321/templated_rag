@@ -18,9 +18,10 @@ services:
       - rag-network
 
   redis:
-    image: redis:7.0
+    image: redis/redis-stack:latest
     ports:
       - "6379:6379"
+      - "8001:8001"  # RedisInsight port
     volumes:
       - redis-data:/data
     networks:
@@ -29,8 +30,8 @@ services:
   mysql:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: 12345678
-      MYSQL_DATABASE: audrey
+      MYSQL_ROOT_PASSWORD: 16052004
+      MYSQL_DATABASE: chathistory
     ports:
       - "3306:3306"
     volumes:

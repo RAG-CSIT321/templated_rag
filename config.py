@@ -3,6 +3,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 MODEL_NAME= 'gemini-2.0-flash'
 MODEL_API_KEY= 'AIzaSyCCDH1LZgcluEGoXnJRyrEZ21aLTBXScK0'
 
+
 class Config:
     def __init__(self):
         self.MODEL_NAME = MODEL_NAME

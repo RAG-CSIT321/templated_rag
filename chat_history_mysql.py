@@ -11,7 +11,7 @@ class ChatHistoryMySQL:
     def _create_connection(self):
         """Create and return a MySQL database connection."""
         return mysql.connector.connect(
-            host="127.0.0.1",
+            host="mysql",
             port=3306,
             user="root",
             password="16052004",

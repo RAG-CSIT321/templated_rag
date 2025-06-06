@@ -9,7 +9,6 @@ import logging
 import threading
 import redis
 from datetime import datetime
-
 import time
 
 from file_processor import FileProcessor
@@ -22,6 +21,9 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from auth_service import AuthService, SECRET_KEY, ALGORITHM
 from pydantic import BaseModel
 from typing import Optional
+
+# Get port from environment variable (for Render.com)
+PORT = int(os.getenv("PORT", 5000))
 
 # Define a model for the request body
 class SaveMessageRequest(BaseModel):
@@ -44,7 +46,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # CORS setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5000", "http://127.0.0.1:5000"],  
+    allow_origins=["*"],  # Update this with your actual domain in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,7 +61,7 @@ chat_history = ChatHistoryMySQL()
 query_engine = QueryEngine()
 file_processor = FileProcessor(data_dir="data")
 store_data = StoreData()
-mysql_listener = MySQLChangeListener()  # We'll initialize this with parameters when connecting
+mysql_listener = MySQLChangeListener()
 
 # Skip default database initialization - we'll only use client-provided databases
 logger.info("Initialized RAG system - waiting for client database connections or file uploads")
@@ -149,23 +151,39 @@ async def connect_database(request: Request, token: str = Depends(oauth2_scheme)
             raise HTTPException(status_code=401, detail="Not authenticated")
         if current_user['role'] != "client":
             raise HTTPException(status_code=403, detail="Only clients can connect databases")
+            
         data = await request.json()
+        
+        # Get the host from the request
+        host = data.get('host')
+        # If connecting to localhost/127.0.0.1, use the Docker service name
+        if host in ['localhost', '127.0.0.1']:
+            host = 'mysql'
+            
         connection_params = {
-            'host': data.get('host'),
+            'host': host,
             'port': data.get('port'),
             'user': data.get('username'),  # Map 'username' to 'user' for MySQL
             'password': data.get('password'),
             'database': data.get('database')
         }
+        
         if not all([connection_params[key] for key in ['host', 'port', 'user', 'password', 'database']]):
             raise HTTPException(status_code=400, detail="All database connection fields are required")
-        store_data.store_mysql(
-            host=connection_params['host'],
-            port=connection_params['port'],
-            user=connection_params['user'],
-            password=connection_params['password'],
-            database=connection_params['database']
-        )
+            
+        # Test the connection first
+        try:
+            store_data.store_mysql(
+                host=connection_params['host'],
+                port=connection_params['port'],
+                user=connection_params['user'],
+                password=connection_params['password'],
+                database=connection_params['database']
+            )
+        except Exception as e:
+            logger.error(f"Failed to connect to database: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Failed to connect to database: {str(e)}")
+            
         file_processor.retriever = store_data.load_retriever()
         
         # Initialize MySQL listener with connection parameters
@@ -469,7 +487,7 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host=os.getenv('HOST', '0.0.0.0'),
-        port=int(os.getenv('PORT', 5000)),
+        port=PORT,
         reload=os.getenv('RELOAD', 'false').lower() == 'true'
     )
 

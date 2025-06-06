@@ -18,13 +18,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class MySQLChangeListener:
-    def __init__(self, host=None, port=None, user=None, password=None, database=None):
+    def __init__(self, host= None, port= None, user= None, password= None, database= None):
         self.host = host
         self.port = port
         self.user = user
         self.password = password
         self.database = database
-        self.redis_client = redis.Redis(host='localhost', port=6379, db=0)
+        self.redis_client = redis.Redis(host='redis', port=6379, db=0)
         self.store_data = StoreData()
 
     def connect_to_mysql(self, connection_params=None):
@@ -47,7 +47,6 @@ class MySQLChangeListener:
         except Error as e:
             logger.error(f"Error connecting to MySQL: {e}")
             return None
-
 
     def add_connection(self, connection_params):
         """
@@ -86,6 +85,7 @@ class MySQLChangeListener:
 
         except Exception as e:
             logging.error(f"Error clearing Redis embeddings: {e}")
+
     def re_embed_all_files(self):
         """Re-embed all files in the data directory."""
         try:
@@ -102,6 +102,7 @@ class MySQLChangeListener:
                     logging.info(f"Re-embedded file: {filename}")
         except Exception as e:
             logging.error(f"Error re-embedding files: {e}")
+
     def update_embeddings(self):
         """Update embeddings with latest MySQL data."""
         try:
@@ -111,7 +112,7 @@ class MySQLChangeListener:
             self.store_data.process_data(documents, False)
             logging.info("Successfully updated MySQL embeddings")
         
-        # Re-embed all files in the data directory
+            # Re-embed all files in the data directory
             self.re_embed_all_files()
             logging.info("Successfully re-embedded all files")
             
@@ -121,13 +122,29 @@ class MySQLChangeListener:
             
     def get_table_hash(self, cursor):
         """Get a hash of the current table content."""
-        cursor.execute("SELECT * FROM test ")
-        rows = cursor.fetchall()
-        # Create a string representation of all rows
-        content_str = str(rows)
-        # Generate hash
-        return hashlib.md5(content_str.encode()).hexdigest()
+        try:
+            # Get list of tables in the database
+            cursor.execute("SHOW TABLES")
+            tables = cursor.fetchall()
             
+            if not tables:
+                logger.warning("No tables found in the database")
+                return None
+                
+            # Create a combined hash of all tables
+            content_str = ""
+            for table in tables:
+                table_name = table[0]
+                cursor.execute(f"SELECT * FROM {table_name}")
+                rows = cursor.fetchall()
+                content_str += str(rows)
+            
+            # Generate hash
+            return hashlib.md5(content_str.encode()).hexdigest()
+        except Error as e:
+            logger.error(f"Error getting table hash: {e}")
+            return None
+
     def monitor_changes(self):
         """Monitor MySQL changes and update embeddings accordingly."""
         while True:
@@ -139,14 +156,18 @@ class MySQLChangeListener:
                     # Get current table hash
                     current_hash = self.get_table_hash(cursor)
                     
+                    if current_hash is None:
+                        logger.error("Failed to get table hash")
+                        time.sleep(5)
+                        continue
+                    
                     # Store the hash for comparison
                     if not hasattr(self, 'last_hash'):
                         self.last_hash = current_hash
                     
                     # Check if there are any changes
                     if current_hash != self.last_hash:
-                        print("Detected changes in MySQL")
-                        logging.info("Detected changes in MySQL database")
+                        logger.info("Detected changes in MySQL database")
                         # Clear existing embeddings
                         self.clear_redis_embeddings()
                         # Update with new data
@@ -161,13 +182,10 @@ class MySQLChangeListener:
                 time.sleep(5)
                 
             except Error as e:
-                logging.error(f"Error in monitoring loop: {e}")
+                logger.error(f"Error in monitoring loop: {e}")
                 time.sleep(5)  # Wait before retrying
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    # Initialize with default connection parameters
     listener = MySQLChangeListener()
     listener.monitor_changes()
